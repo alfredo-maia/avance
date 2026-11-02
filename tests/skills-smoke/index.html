@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Prontidão — Skills Smoke</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1 class="title">Prontidão de Habilidades</h1>
+      <p class="subtitle">Demonstração técnica de prontidão para o fluxo de agentes.</p>
+    </header>
+
+    <fieldset class="panel">
+      <legend class="legend">Verificações Obrigatórias</legend>
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input type="checkbox" id="check-setup" name="setup">
+          <label for="check-setup">Setup</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="check-spec" name="spec">
+          <label for="check-spec">SPEC</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="check-qa" name="qa">
+          <label for="check-qa">QA</label>
+        </div>
+      </div>
+    </fieldset>
+
+    <section class="status-panel" aria-labelledby="status-heading">
+      <h2 id="status-heading" class="sr-only">Estado Atual</h2>
+      <div class="status-indicator">
+        <span class="status-label">Status:</span>
+        <span id="status-badge" class="badge badge-pending" role="status" aria-live="polite" aria-atomic="true">Pendente</span>
+      </div>
+      <div class="missing-container">
+        <span class="missing-label">Pendências:</span>
+        <ul id="missing-list" class="missing-list">
+          <li>setup</li>
+          <li>spec</li>
+          <li>qa</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+import test, { before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PLAYWRIGHT_PATH = process.env.PLAYWRIGHT_PATH || '/home/hermes/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs';
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+};
+
+let server;
+let baseUrl;
+let browser;
+
+before(async () => {
+  server = http.createServer(async (req, res) => {
+    try {
+      const parsedUrl = new URL(req.url, 'http://localhost');
+      let pathname = parsedUrl.pathname;
+      if (pathname === '/') pathname = '/index.html';
+
+      const filePath = path.join(__dirname, pathname);
+      if (!filePath.startsWith(__dirname)) {
+        res.statusCode = 403;
+        res.end('Forbidden');
+        return;
+      }
+
+      const ext = path.extname(filePath);
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      const content = await fs.readFile(filePath);
+
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(content);
+    } catch (err) {
+      res.statusCode = 404;
+      res.end('Not Found');
+    }
+  });
+
+  await new Promise((resolve) => {
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      baseUrl = `http://127.0.0.1:${port}`;
+      resolve();
+    });
+  });
+
+  const { chromium } = await import(PLAYWRIGHT_PATH);
+  browser = await chromium.launch({ headless: true });
+});
+
+after(async () => {
+  if (browser) {
+    await browser.close();
+  }
+  if (server) {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('AC-6: Interface HTML - Estado Inicial e Reatividade', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${baseUrl}/index.html`);
+
+    const setupBox = page.locator('#check-setup');
+    const specBox = page.locator('#check-spec');
+    const qaBox = page.locator('#check-qa');
+    const statusBadge = page.locator('#status-badge');
+    const missingList = page.locator('#missing-list');
+
+    // 1. Estado inicial: desmarcadas, status Pendente e todas as faltantes
+    assert.strictEqual(await setupBox.isChecked(), false);
+    assert.strictEqual(await specBox.isChecked(), false);
+    assert.strictEqual(await qaBox.isChecked(), false);
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+
+    let missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['setup', 'spec', 'qa']);
+
+    // 2. Marcar Setup: status ainda Pendente, faltam spec e qa
+    await setupBox.check();
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+    missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['spec', 'qa']);
+
+    // 3. Marcar SPEC e QA: status torna-se Pronto
+    await specBox.check();
+    await qaBox.check();
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pronto');
+    const emptyText = (await missingList.locator('li').first().textContent()).trim();
+    assert.strictEqual(emptyText, 'Nenhuma pendência');
+
+    // 4. Desmarcar QA: status volta a Pendente e lista 'qa'
+    await qaBox.uncheck();
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+    missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['qa']);
+  } finally {
+    await page.close();
+  }
+});
+
+test('AC-7: Acessibilidade da UI (labels, navegação por teclado e atributos ARIA)', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${baseUrl}/index.html`);
+
+    // 1. Labels associados explicitamente aos inputs
+    const inputs = ['check-setup', 'check-spec', 'check-qa'];
+    for (const id of inputs) {
+      const label = page.locator(`label[for="${id}"]`);
+      assert.strictEqual(await label.count(), 1, `Label para ${id} deve existir`);
+      const text = (await label.textContent()).trim();
+      assert.ok(text.length > 0, `Label para ${id} deve conter texto acessível`);
+    }
+
+    // 2. Região de status anunciável
+    const statusBadge = page.locator('#status-badge');
+    assert.strictEqual(await statusBadge.getAttribute('role'), 'status');
+    assert.strictEqual(await statusBadge.getAttribute('aria-live'), 'polite');
+    assert.strictEqual(await statusBadge.getAttribute('aria-atomic'), 'true');
+
+    // 3. Navegação e alternância por teclado (Tab e Espaço)
+    // Foca o primeiro input via Tab a partir do topo
+    await page.keyboard.press('Tab');
+    const focusedId1 = await page.evaluate(() => document.activeElement?.id);
+    assert.strictEqual(focusedId1, 'check-setup', 'Primeiro Tab deve focar check-setup');
+
+    // Alterna com Espaço
+    await page.keyboard.press('Space');
+    assert.strictEqual(await page.locator('#check-setup').isChecked(), true, 'Espaço deve marcar check-setup');
+
+    // Próximo Tab foca check-spec
+    await page.keyboard.press('Tab');
+    const focusedId2 = await page.evaluate(() => document.activeElement?.id);
+    assert.strictEqual(focusedId2, 'check-spec', 'Segundo Tab deve focar check-spec');
+
+    await page.keyboard.press('Space');
+    assert.strictEqual(await page.locator('#check-spec').isChecked(), true, 'Espaço deve marcar check-spec');
+
+    // Próximo Tab foca check-qa
+    await page.keyboard.press('Tab');
+    const focusedId3 = await page.evaluate(() => document.activeElement?.id);
+    assert.strictEqual(focusedId3, 'check-qa', 'Terceiro Tab deve focar check-qa');
+
+    await page.keyboard.press('Space');
+    assert.strictEqual(await page.locator('#check-qa').isChecked(), true, 'Espaço deve marcar check-qa');
+
+    // Com as 3 marcadas via teclado, status deve ser Pronto
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pronto');
+  } finally {
+    await page.close();
+  }
+});
+
+test('AC-8: Responsividade da UI (viewport de 360px sem estouro horizontal)', async () => {
+  const page = await browser.newPage();
+  try {
+    // Configura viewport móvel estrito a 360px
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto(`${baseUrl}/index.html`);
+
+    const hasHorizontalOverflow = await page.evaluate(() => {
+      const scrollW = document.documentElement.scrollWidth;
+      const clientW = document.documentElement.clientWidth;
+      return scrollW > clientW;
+    });
+
+    assert.strictEqual(hasHorizontalOverflow, false, 'Não deve haver estouro ou scroll horizontal em 360px');
+
+    const dimensions = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+      innerWidth: window.innerWidth,
+    }));
+
+    assert.ok(dimensions.scrollWidth <= 360, `scrollWidth (${dimensions.scrollWidth}) deve ser <= 360`);
+  } finally {
+    await page.close();
+  }
+});
+
+test('AC-9: Isolamento e ausência de chamadas de rede externas', async () => {
+  const page = await browser.newPage();
+  const externalRequests = [];
+
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1' && url.hostname !== 'localhost') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  try {
+    await page.goto(`${baseUrl}/index.html`);
+    assert.strictEqual(externalRequests.length, 0, 'Nenhuma requisição de rede externa permitida');
+  } finally {
+    await page.close();
+  }
+});
