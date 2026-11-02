@@ -25,10 +25,10 @@ Todas as chamadas usam `Authorization: Bearer $PAPERCLIP_API_KEY` sobre `$PAPERC
 - **Documentos da tarefa (`spec`, `plan`, artefatos)**:
   - Ler ou salvar documentos estruturados na própria tarefa via `PUT /api/issues/{issueId}/documents/{key}` (ex.: `spec`, `plan`), preservando revisões conforme a skill `paperclip`.
 - **Dependências e Bloqueios (`Blocking`)**:
-  - Use o campo nativo `blockedByIssueIds: ["{blockerIssueId}"]` no `POST` ou `PATCH /api/issues/{issueId}` com `"status": "blocked"`.
+  - Use o campo nativo `blockedByIssueIds: ["{blockerIssueId}"]` no `POST` ou `PATCH /api/issues/{issueId}`. Um ticket planejado pode manter `status: "backlog"`; a existência da dependência não exige transformar todo ticket planejado em bloqueio operacional. O GET retorna os resumos das dependências em `blockedBy`, cada um com `id`.
   - Uma tarefa fica desbloqueada quando todas as issues em `blockedBy` atingem o estado `done` (disparando `issue_blockers_resolved`).
 - **Aplicar etiquetas (`Labels`)**:
-  - Use os IDs ou nomes das etiquetas cadastradas no Paperclip para a company `672fabb1-8461-437d-ad7b-6a7bd33df05c` conforme mapeado em `docs/agents/triage-labels.md`.
+  - Envie somente IDs no campo `labelIds: ["{labelId}"]` das etiquetas cadastradas no Paperclip para a company `672fabb1-8461-437d-ad7b-6a7bd33df05c` conforme mapeado em `docs/agents/triage-labels.md`.
 - **Atualizar estado e concluir**:
   - `PATCH /api/issues/{issueId}` com `{ "status": "done" | "in_review" | "blocked" | "in_progress", "comment": "..." }`.
   - Confirme sempre o corpo JSON retornado pela API.

@@ -1,0 +1,11 @@
+{
+  "projectId": "85e90bdd-3d30-4d93-8026-1243a441afd8",
+  "backendIssueId": "81c05467-598c-48d3-9a38-d5b6d740cfce",
+  "backendIdentifier": "AV-73",
+  "frontendIssueId": "e134ca1f-656f-4a9f-8559-081b72c371f2",
+  "frontendIdentifier": "AV-74",
+  "dependency": {
+    "blockedIssueId": "e134ca1f-656f-4a9f-8559-081b72c371f2",
+    "blockedById": "81c05467-598c-48d3-9a38-d5b6d740cfce"
+  }
+}

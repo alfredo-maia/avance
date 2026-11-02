@@ -27,3 +27,19 @@ _Avoid_: Self-review como aceite final, aprovação automática
 **Skill Smoke Test**:
 Exercício isolado em `tests/skills-smoke/` destinado exclusivamente a validar o funcionamento integrado das skills de engenharia, sem definir a arquitetura ou a stack do produto Avance.
 _Avoid_: Protótipo de produto, código de produção
+
+**Readiness Check**:
+Verificação booleana obrigatória (`setup`, `spec`, `qa`) que reflete a conclusão de uma etapa fundamental do fluxo de validação de skills.
+_Avoid_: Flag genérica, checagem parcial não mapeada
+
+**evaluateReadiness**:
+Função pura de domínio que avalia o objeto de verificações, exigindo os três campos booleanos obrigatórios, retornando status de prontidão (`ready`) e a lista ordenada de faltantes (`missing`).
+_Avoid_: Validação distribuída na interface, regra de negócio na CLI
+
+**Smoke CLI**:
+Fronteira em linha de comando para exercício direto do domínio `evaluateReadiness` via argumento JSON, com código de saída determinístico (0 para sucesso, 2 para erro de contrato ou parsing).
+_Avoid_: Script interativo, CLI com dependências externas de produto
+
+**Smoke UI**:
+Página HTML/CSS/JS estática em `tests/skills-smoke/` que consome `evaluateReadiness`, acessível por teclado, compatível com viewport de 360px e com região de status anunciável.
+_Avoid_: Aplicação SPA com framework, interface conectada a API remota

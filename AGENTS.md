@@ -45,3 +45,7 @@ Cinco etiquetas canônicas de triagem (`needs-triage`, `needs-info`, `ready-for-
 ### Domain docs
 
 Layout `single-context` com `GLOSSARY.md` na raiz do repositório e ADRs em `docs/adr/`. See `docs/agents/domain.md`.
+
+## Preflight de execução
+
+Antes de implementar, execute `python3 scripts/check_agent_setup.py --command implement` (ou `implement-spec`/`tdd`). O validador usa PAPERCLIP_AGENT_ID quando presente para conferir a atribuição declarada. Se o setup estiver ausente ou incoerente, pare e informe `/setup-matt-pocock-skills`; esse setup exige acionamento explícito. O preflight verifica configuração, não substitui as permissões do runtime.
