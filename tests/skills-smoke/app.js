@@ -3,6 +3,7 @@ import { evaluateReadiness } from './readiness.mjs';
 const setupCheckbox = document.getElementById('check-setup');
 const specCheckbox = document.getElementById('check-spec');
 const qaCheckbox = document.getElementById('check-qa');
+const clearButton = document.getElementById('btn-clear');
 const statusBadge = document.getElementById('status-badge');
 const missingList = document.getElementById('missing-list');
 
@@ -27,6 +28,15 @@ function updateReadiness() {
 setupCheckbox.addEventListener('change', updateReadiness);
 specCheckbox.addEventListener('change', updateReadiness);
 qaCheckbox.addEventListener('change', updateReadiness);
+
+function clearReadiness() {
+  setupCheckbox.checked = false;
+  specCheckbox.checked = false;
+  qaCheckbox.checked = false;
+  updateReadiness();
+}
+
+clearButton?.addEventListener('click', clearReadiness);
 
 // Executa a avaliação no carregamento para sincronia de estado inicial
 updateReadiness();

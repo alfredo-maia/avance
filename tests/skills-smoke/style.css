@@ -103,6 +103,38 @@ body {
   user-select: none;
 }
 
+.panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.btn-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem 0.875rem;
+  font-family: var(--font-family);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-main);
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-clear:hover {
+  background-color: var(--bg-color);
+  border-color: var(--text-muted);
+}
+
+.btn-clear:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .status-panel {
   border-top: 1px solid var(--border-color);
   padding-top: 1rem;

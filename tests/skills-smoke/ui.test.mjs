@@ -207,3 +207,144 @@ test('AC-9: Isolamento e ausência de chamadas de rede externas', async () => {
     await page.close();
   }
 });
+
+test('Botão Limpar: Presença, semântica e reset de estado completo e parcial (AC-1, AC-2, AC-3)', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${baseUrl}/index.html`);
+
+    const setupBox = page.locator('#check-setup');
+    const specBox = page.locator('#check-spec');
+    const qaBox = page.locator('#check-qa');
+    const statusBadge = page.locator('#status-badge');
+    const missingList = page.locator('#missing-list');
+    const clearBtn = page.locator('#btn-clear');
+
+    // AC-1: Presença e semântica do botão
+    assert.strictEqual(await clearBtn.count(), 1, 'O botão #btn-clear deve existir');
+    assert.strictEqual(await clearBtn.isVisible(), true, 'O botão #btn-clear deve ser visível');
+    assert.strictEqual(await clearBtn.getAttribute('type'), 'button', 'O botão deve ter type="button"');
+    assert.strictEqual((await clearBtn.textContent()).trim(), 'Limpar', 'O botão deve ter texto "Limpar"');
+
+    // AC-2: Reset do estado completo para Pendente
+    await setupBox.check();
+    await specBox.check();
+    await qaBox.check();
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pronto');
+    assert.strictEqual(await statusBadge.evaluate(el => el.classList.contains('badge-ready')), true);
+
+    await clearBtn.click();
+
+    assert.strictEqual(await setupBox.isChecked(), false);
+    assert.strictEqual(await specBox.isChecked(), false);
+    assert.strictEqual(await qaBox.isChecked(), false);
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+    assert.strictEqual(await statusBadge.evaluate(el => el.classList.contains('badge-pending')), true);
+    let missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['setup', 'spec', 'qa']);
+
+    // AC-3: Reset de estado parcial e idempotência
+    await setupBox.check();
+    await qaBox.check();
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+    missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['spec']);
+
+    await clearBtn.click();
+    assert.strictEqual(await setupBox.isChecked(), false);
+    assert.strictEqual(await specBox.isChecked(), false);
+    assert.strictEqual(await qaBox.isChecked(), false);
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+    assert.strictEqual(await statusBadge.evaluate(el => el.classList.contains('badge-pending')), true);
+    missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['setup', 'spec', 'qa']);
+
+    await clearBtn.click();
+    assert.strictEqual(await setupBox.isChecked(), false);
+    assert.strictEqual(await specBox.isChecked(), false);
+    assert.strictEqual(await qaBox.isChecked(), false);
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+    missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['setup', 'spec', 'qa']);
+  } finally {
+    await page.close();
+  }
+});
+
+test('Botão Limpar: Acessibilidade e navegação por teclado (AC-4)', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${baseUrl}/index.html`);
+
+    const setupBox = page.locator('#check-setup');
+    const specBox = page.locator('#check-spec');
+    const qaBox = page.locator('#check-qa');
+    const statusBadge = page.locator('#status-badge');
+    const clearBtn = page.locator('#btn-clear');
+
+    // Ordem de tabulação: check-setup -> check-spec -> check-qa -> btn-clear
+    await page.keyboard.press('Tab');
+    assert.strictEqual(await page.evaluate(() => document.activeElement?.id), 'check-setup');
+
+    await page.keyboard.press('Tab');
+    assert.strictEqual(await page.evaluate(() => document.activeElement?.id), 'check-spec');
+
+    await page.keyboard.press('Tab');
+    assert.strictEqual(await page.evaluate(() => document.activeElement?.id), 'check-qa');
+
+    await page.keyboard.press('Space');
+    assert.strictEqual(await qaBox.isChecked(), true);
+
+    await page.keyboard.press('Tab');
+    assert.strictEqual(await page.evaluate(() => document.activeElement?.id), 'btn-clear');
+    const outlineStyle = await page.evaluate(() => window.getComputedStyle(document.getElementById('btn-clear')).outlineStyle);
+    assert.strictEqual(outlineStyle, 'solid', 'Botão Limpar deve ter :focus-visible nítido com outline');
+
+    // Acionamento via Enter
+    await page.keyboard.press('Enter');
+    assert.strictEqual(await qaBox.isChecked(), false);
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+
+    // Acionamento via Space
+    await setupBox.check();
+    assert.strictEqual(await setupBox.isChecked(), true);
+    await clearBtn.focus();
+    assert.strictEqual(await page.evaluate(() => document.activeElement?.id), 'btn-clear');
+    await page.keyboard.press('Space');
+    assert.strictEqual(await setupBox.isChecked(), false);
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+  } finally {
+    await page.close();
+  }
+});
+
+test('Botão Limpar: Responsividade e isolamento em viewport móvel 360x640 (AC-5)', async () => {
+  const page = await browser.newPage();
+  const externalRequests = [];
+
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1' && url.hostname !== 'localhost') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  try {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto(`${baseUrl}/index.html`);
+
+    const clearBtn = page.locator('#btn-clear');
+    assert.strictEqual(await clearBtn.isVisible(), true, 'Botão Limpar deve estar visível em 360px');
+
+    const dimensions = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+
+    assert.ok(dimensions.scrollWidth <= 360, `scrollWidth (${dimensions.scrollWidth}) deve ser <= 360`);
+    assert.strictEqual(dimensions.scrollWidth <= dimensions.clientWidth, true, 'Sem overflow horizontal');
+    assert.strictEqual(externalRequests.length, 0, 'Nenhuma requisição externa permitida');
+  } finally {
+    await page.close();
+  }
+});
