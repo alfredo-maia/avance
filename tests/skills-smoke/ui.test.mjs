@@ -348,3 +348,202 @@ test('Botão Limpar: Responsividade e isolamento em viewport móvel 360x640 (AC-
     await page.close();
   }
 });
+
+test('Contador de verificações: Presença e estado inicial junto ao status (AC-1)', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${baseUrl}/index.html`);
+
+    const statusBadge = page.locator('#status-badge');
+    const statusCount = page.locator('#status-count');
+
+    // 1. O elemento #status-count deve existir dentro de .status-indicator
+    assert.strictEqual(await statusCount.count(), 1, 'Elemento #status-count deve existir');
+    const isInsideIndicator = await page.evaluate(() => {
+      const el = document.getElementById('status-count');
+      return el?.parentElement?.classList.contains('status-indicator');
+    });
+    assert.strictEqual(isInsideIndicator, true, '#status-count deve estar no bloco .status-indicator');
+
+    // 2. Elemento deve ser span com classe status-count e visível
+    assert.strictEqual(await statusCount.evaluate(el => el.tagName.toLowerCase()), 'span');
+    assert.strictEqual(await statusCount.evaluate(el => el.classList.contains('status-count')), true);
+    assert.strictEqual(await statusCount.isVisible(), true, '#status-count deve ser visível');
+
+    // 3. Texto inicial deve ser "0 de 3"
+    assert.strictEqual((await statusCount.textContent()).trim(), '0 de 3');
+
+    // 4. Texto do #status-badge deve permanecer estritamente "Pendente"
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+  } finally {
+    await page.close();
+  }
+});
+
+test('Contador de verificações: Atualização reativa ao marcar e desmarcar etapas (AC-2)', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${baseUrl}/index.html`);
+
+    const setupBox = page.locator('#check-setup');
+    const specBox = page.locator('#check-spec');
+    const qaBox = page.locator('#check-qa');
+    const statusBadge = page.locator('#status-badge');
+    const statusCount = page.locator('#status-count');
+
+    // Estado inicial
+    assert.strictEqual((await statusCount.textContent()).trim(), '0 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+
+    // Marcar 1 (setup) -> 1 de 3
+    await setupBox.check();
+    assert.strictEqual((await statusCount.textContent()).trim(), '1 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+
+    // Marcar 2 (setup + spec) -> 2 de 3
+    await specBox.check();
+    assert.strictEqual((await statusCount.textContent()).trim(), '2 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+
+    // Marcar 3 (setup + spec + qa) -> 3 de 3, status Pronto
+    await qaBox.check();
+    assert.strictEqual((await statusCount.textContent()).trim(), '3 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pronto');
+
+    // Desmarcar qa -> 2 de 3, status Pendente
+    await qaBox.uncheck();
+    assert.strictEqual((await statusCount.textContent()).trim(), '2 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+
+    // Desmarcar spec -> 1 de 3, status Pendente
+    await specBox.uncheck();
+    assert.strictEqual((await statusCount.textContent()).trim(), '1 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+
+    // Desmarcar setup -> 0 de 3, status Pendente
+    await setupBox.uncheck();
+    assert.strictEqual((await statusCount.textContent()).trim(), '0 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+
+    // Testar combinação não sequencial: marcar qa e spec -> 2 de 3
+    await qaBox.check();
+    await specBox.check();
+    assert.strictEqual((await statusCount.textContent()).trim(), '2 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+  } finally {
+    await page.close();
+  }
+});
+
+test('Contador de verificações: Reset via botão Limpar a partir de estado parcial e completo (AC-3)', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${baseUrl}/index.html`);
+
+    const setupBox = page.locator('#check-setup');
+    const specBox = page.locator('#check-spec');
+    const qaBox = page.locator('#check-qa');
+    const statusBadge = page.locator('#status-badge');
+    const statusCount = page.locator('#status-count');
+    const missingList = page.locator('#missing-list');
+    const clearBtn = page.locator('#btn-clear');
+
+    // 1. Estado parcial: marcar setup -> "1 de 3"
+    await setupBox.check();
+    assert.strictEqual((await statusCount.textContent()).trim(), '1 de 3');
+
+    // Reset via Limpar
+    await clearBtn.click();
+    assert.strictEqual((await statusCount.textContent()).trim(), '0 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+    let missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['setup', 'spec', 'qa']);
+
+    // 2. Outro estado parcial: marcar spec e qa -> "2 de 3"
+    await specBox.check();
+    await qaBox.check();
+    assert.strictEqual((await statusCount.textContent()).trim(), '2 de 3');
+
+    await clearBtn.click();
+    assert.strictEqual((await statusCount.textContent()).trim(), '0 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+    missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['setup', 'spec', 'qa']);
+
+    // 3. Estado completo: marcar todas as 3 -> "3 de 3"
+    await setupBox.check();
+    await specBox.check();
+    await qaBox.check();
+    assert.strictEqual((await statusCount.textContent()).trim(), '3 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pronto');
+
+    await clearBtn.click();
+    assert.strictEqual((await statusCount.textContent()).trim(), '0 de 3');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+    missing = (await missingList.locator('li').allTextContents()).map(s => s.trim());
+    assert.deepStrictEqual(missing, ['setup', 'spec', 'qa']);
+  } finally {
+    await page.close();
+  }
+});
+
+test('Contador de verificações: Acessibilidade e não-regressão de contratos (AC-4)', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${baseUrl}/index.html`);
+
+    const statusBadge = page.locator('#status-badge');
+
+    // 1. #status-badge preserva role="status", aria-live="polite", aria-atomic="true"
+    assert.strictEqual(await statusBadge.getAttribute('role'), 'status');
+    assert.strictEqual(await statusBadge.getAttribute('aria-live'), 'polite');
+    assert.strictEqual(await statusBadge.getAttribute('aria-atomic'), 'true');
+    assert.strictEqual((await statusBadge.textContent()).trim(), 'Pendente');
+
+    // 2. Ordem de tabulação inalterada: check-setup -> check-spec -> check-qa -> btn-clear
+    await page.keyboard.press('Tab');
+    assert.strictEqual(await page.evaluate(() => document.activeElement?.id), 'check-setup');
+
+    await page.keyboard.press('Tab');
+    assert.strictEqual(await page.evaluate(() => document.activeElement?.id), 'check-spec');
+
+    await page.keyboard.press('Tab');
+    assert.strictEqual(await page.evaluate(() => document.activeElement?.id), 'check-qa');
+
+    await page.keyboard.press('Tab');
+    assert.strictEqual(await page.evaluate(() => document.activeElement?.id), 'btn-clear');
+  } finally {
+    await page.close();
+  }
+});
+
+test('Contador de verificações: Responsividade e isolamento em viewport móvel 360x640 (AC-5)', async () => {
+  const page = await browser.newPage();
+  const externalRequests = [];
+
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1' && url.hostname !== 'localhost') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  try {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto(`${baseUrl}/index.html`);
+
+    const statusCount = page.locator('#status-count');
+    assert.strictEqual(await statusCount.isVisible(), true, '#status-count deve ser visível em 360px');
+
+    const dimensions = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+
+    assert.ok(dimensions.scrollWidth <= 360, `scrollWidth (${dimensions.scrollWidth}) deve ser <= 360`);
+    assert.strictEqual(dimensions.scrollWidth <= dimensions.clientWidth, true, 'Sem overflow horizontal em 360px');
+    assert.strictEqual(externalRequests.length, 0, 'Nenhuma requisição externa permitida');
+  } finally {
+    await page.close();
+  }
+});

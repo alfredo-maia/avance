@@ -5,6 +5,7 @@ const specCheckbox = document.getElementById('check-spec');
 const qaCheckbox = document.getElementById('check-qa');
 const clearButton = document.getElementById('btn-clear');
 const statusBadge = document.getElementById('status-badge');
+const statusCount = document.getElementById('status-count');
 const missingList = document.getElementById('missing-list');
 
 function updateReadiness() {
@@ -13,6 +14,12 @@ function updateReadiness() {
     spec: specCheckbox.checked,
     qa: qaCheckbox.checked,
   });
+
+  const total = 3;
+  const completed = total - result.missing.length;
+  if (statusCount) {
+    statusCount.textContent = `${completed} de ${total}`;
+  }
 
   if (result.ready) {
     statusBadge.textContent = 'Pronto';
