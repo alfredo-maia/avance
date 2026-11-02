@@ -1,0 +1,5 @@
+# 0001. Paperclip como Issue Tracker e Isolamento dos Testes de Skills
+
+Status: accepted
+
+Adotamos o **Paperclip** (`companyId`: `672fabb1-8461-437d-ad7b-6a7bd33df05c`, `projectId`: `85e90bdd-3d30-4d93-8026-1243a441afd8`, `workspaceId`: `fadc6cfd-9bc7-4e47-a401-c0cb5abceb38`) como único rastreador de tarefas, especificações, etiquetas de triagem e dependências do projeto **Avance**, mantendo o GitHub (`https://github.com/alfredo-maia/avance.git`) apenas para hospedagem de código e Pull Requests. Embora as skills originais de Matt Pocock assumam GitHub Issues ou arquivos locais em `.scratch/` por padrão, centralizar o rastreamento no Paperclip preserva a governança multiagente (`GOVERNANCE.md`), o controle de execução por run (`X-Paperclip-Run-Id`), as dependências nativas (`blockedByIssueIds`) e a rastreabilidade de auditoria sem duplicar tickets entre serviços. Adicionalmente, como a stack do produto Avance ainda não foi definida, qualquer validação de integração das skills fica estritamente isolada em `tests/skills-smoke/` na branch `test/agent-workflow`, impedindo que artefatos de teste contaminem a futura arquitetura do produto.
