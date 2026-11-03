@@ -1462,8 +1462,9 @@ export async function startDashboardServer(port = 3000, existingStore = null) {
     }
   });
 
+  const host = process.env.HOST || '0.0.0.0';
   return new Promise((resolve) => {
-    server.listen(port, '127.0.0.1', () => {
+    server.listen(port, host, () => {
       resolve(server);
     });
   });
