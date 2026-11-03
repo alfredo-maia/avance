@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: avance-saas-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: avance
+      POSTGRES_PASSWORD: avance_secret_2026
+      POSTGRES_DB: avance_saas
+    ports:
+      - "127.0.0.1:15436:5432"
+    volumes:
+      - avance_saas_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avance -d avance_saas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: avance-saas-app
+    restart: unless-stopped
+    ports:
+      - "3020:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://avance:avance_secret_2026@db:5432/avance_saas?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  avance_saas_pgdata:
