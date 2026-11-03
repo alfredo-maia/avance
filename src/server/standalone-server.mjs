@@ -162,9 +162,9 @@ function seedDemoData(store) {
     year: 2026,
     category: 'FINANCEIRA',
     title: 'Bônus Executivo Extraordinário por Antecipação de Metas',
-    financialImpact: 15000,
-    description: 'Reconhecimento corporativo com aporte total em investimentos',
-    achievedDate: '2026-01-20',
+    amount: 15000,
+    realized: true,
+    notes: 'Reconhecimento corporativo com aporte total em investimentos (2026-01-20)',
   });
 
   // Módulo 4: Plano de Ação (4 Tipos de Acompanhamento: SOMA, LIMITE_MAXIMO, ULTIMO_VALOR_REDUZIR, MARCO_TEXTO)
@@ -1038,8 +1038,8 @@ function renderDashboardHtml(initialData) {
                 <tr>
                   <td><strong>${e.title}</strong></td>
                   <td>${e.category}</td>
-                  <td>R$ ${e.financialImpact.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                  <td>${e.achievedDate}</td>
+                  <td>R$ ${(e.amount ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td>${e.notes || 'Realizada'}</td>
                 </tr>
               `).join('')}
             </tbody>

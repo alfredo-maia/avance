@@ -1,6 +1,5 @@
 import test, { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
 import { startDashboardServer } from '../../src/server/standalone-server.mjs';
 
 let serverInstance: any;
@@ -16,7 +15,6 @@ describe('SaaS Multi-Tenant Dashboard UI & Frontend TDD (AC-16)', () => {
     const port = serverInstance.address().port;
     baseUrl = `http://127.0.0.1:${port}`;
 
-    const PLAYWRIGHT_PATH = process.env.PLAYWRIGHT_PATH || '/home/hermes/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs';
     const { chromium } = await import(PLAYWRIGHT_PATH);
     browser = await chromium.launch({ headless: true });
   });
