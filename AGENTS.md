@@ -6,8 +6,8 @@
 - **Company ID**: `672fabb1-8461-437d-ad7b-6a7bd33df05c`
 - **Workspace**: `fadc6cfd-9bc7-4e47-a401-c0cb5abceb38` (`/home/hermes/apps/avance`)
 - **Repositório Git**: `https://github.com/alfredo-maia/avance.git` (branch de teste: `test/agent-workflow`)
-- **Stack do produto**: Indefinida (será definida pelos requisitos reais do produto; não instalar dependências de produto por presunção).
-- **Testes de integração das skills**: Isolados em `tests/skills-smoke/` usando apenas ferramentas já disponíveis no ambiente.
+- **Stack do produto**: `Next.js (App Router + TypeScript) + Prisma + PostgreSQL` (conforme `ADR-0002` e decisão `AV-87` / `3ab7af11-1bc4-4af4-b24f-dcb4d8a4d37b`).
+- **Testes de integração das skills**: Isolados em `tests/skills-smoke/` usando apenas ferramentas já disponíveis no ambiente (`ADR-0001`).
 
 ## Regras Operacionais
 

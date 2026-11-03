@@ -1,0 +1,270 @@
+// This is your Prisma schema file for the Avance Multi-Tenant Financial & Goals SaaS (ADR-0002)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SaaSPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum ProfileType {
+  PF
+  PJ
+}
+
+enum FinancialGroup {
+  RECURSOS_FINANCEIROS
+  RECEITAS
+  INVESTIMENTOS
+  DESPESAS_FIXAS
+  DESPESAS_VARIAVEIS
+}
+
+enum GoalCategory {
+  FINANCEIRA
+  DESENVOLVIMENTO_PESSOAL
+  FISICA_SAUDE
+  DIVERSAO
+}
+
+enum GoalEvaluation {
+  ATINGIDA
+  JUSTIFICATIVA_ACEITAVEL
+  JUSTIFICATIVA_NAO_ACEITAVEL
+}
+
+enum IndicatorTrackingType {
+  SOMA
+  LIMITE_MAXIMO
+  ULTIMO_VALOR_REDUZIR
+  MARCO_TEXTO
+}
+
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  plan        SaaSPlan @default(PRO)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users                User[]
+  financialCategories  FinancialCategory[]
+  monthlyEntries       MonthlyBudgetEntry[]
+  creditCards          CreditCard[]
+  creditCardInvoices   CreditCardInvoice[]
+  installmentPurchases InstallmentPurchase[]
+  goals                Goal[]
+  extraAchievements    ExtraAchievement[]
+  goalIndicators       GoalIndicator[]
+  indicatorEntries     IndicatorMonthEntry[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  tenantId  String
+  email     String
+  name      String
+  role      UserRole @default(OWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model FinancialCategory {
+  id           String         @id @default(uuid())
+  tenantId     String
+  group        FinancialGroup
+  subGroup     String?
+  name         String
+  profile      ProfileType    @default(PF)
+  dueDay       Int?
+  linkedCardId String?
+  displayOrder Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries        MonthlyBudgetEntry[]
+  goalIndicators GoalIndicator[]
+
+  @@index([tenantId, group])
+}
+
+model MonthlyBudgetEntry {
+  id          String    @id @default(uuid())
+  tenantId    String
+  categoryId  String
+  year        Int
+  month       Int // 1..12
+  realized    Decimal   @default(0) @db.Decimal(14, 2)
+  target      Decimal   @default(0) @db.Decimal(14, 2)
+  settledAt   DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category FinancialCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, categoryId, year, month])
+  @@index([tenantId, year, month])
+}
+
+model CreditCard {
+  id         String      @id @default(uuid())
+  tenantId   String
+  name       String
+  profile    ProfileType @default(PF)
+  closingDay Int
+  dueDay     Int
+  limitAmount Decimal    @db.Decimal(14, 2)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices  CreditCardInvoice[]
+  purchases InstallmentPurchase[]
+
+  @@index([tenantId])
+}
+
+model CreditCardInvoice {
+  id             String   @id @default(uuid())
+  tenantId       String
+  cardId         String
+  year           Int
+  month          Int // 1..12
+  informedAmount Decimal? @db.Decimal(14, 2)
+  settledAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  card   CreditCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, cardId, year, month])
+  @@index([tenantId, year, month])
+}
+
+model InstallmentPurchase {
+  id               String   @id @default(uuid())
+  tenantId         String
+  cardId           String
+  purchaseDate     DateTime
+  description      String
+  category         String // 1 of 14 canonical card categories
+  totalAmount      Decimal  @db.Decimal(14, 2)
+  installments     Int      @default(1)
+  firstInvoiceYear Int
+  firstInvoiceMonth Int // 1..12
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  card   CreditCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, cardId])
+}
+
+model Goal {
+  id                String          @id @default(uuid())
+  tenantId          String
+  year              Int
+  code              String // e.g. "1.1", "2.1"
+  category          GoalCategory
+  title             String
+  deadline          DateTime?
+  targetAmount      Decimal?        @db.Decimal(14, 2)
+  realized          Boolean         @default(false)
+  resultComment     String?
+  evaluation        GoalEvaluation?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  indicators GoalIndicator[]
+
+  @@index([tenantId, year])
+}
+
+model ExtraAchievement {
+  id          String       @id @default(uuid())
+  tenantId    String
+  year        Int
+  category    GoalCategory
+  title       String
+  amount      Decimal      @default(0) @db.Decimal(14, 2)
+  realized    Boolean      @default(true)
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, year])
+}
+
+model GoalIndicator {
+  id                      String                @id @default(uuid())
+  tenantId                String
+  goalId                  String
+  year                    Int
+  name                    String
+  deadline                DateTime?
+  targetValue             Decimal?              @db.Decimal(14, 2)
+  completed               Boolean               @default(false)
+  trackingType            IndicatorTrackingType
+  linkedFinanceCategoryId String?
+  linkedFinanceGroup      FinancialGroup?
+  notes                   String?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  tenant                Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  goal                  Goal                  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  linkedFinanceCategory FinancialCategory?    @relation(fields: [linkedFinanceCategoryId], references: [id], onDelete: SetNull)
+  monthlyEntries        IndicatorMonthEntry[]
+
+  @@index([tenantId, year])
+}
+
+model IndicatorMonthEntry {
+  id            String   @id @default(uuid())
+  tenantId      String
+  indicatorId   String
+  month         Int // 1..12
+  plannedValue  Decimal? @db.Decimal(14, 2)
+  realizedValue Decimal? @db.Decimal(14, 2)
+  plannedText   String?
+  realizedText  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  indicator GoalIndicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, indicatorId, month])
+  @@index([tenantId, indicatorId])
+}

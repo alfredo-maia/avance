@@ -1,0 +1,30 @@
+{
+  "name": "avance-saas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Avance SaaS Multi-Tenant Financeiro e de Metas (AV-87 / ADR-0002)",
+  "scripts": {
+    "dev": "node src/server/standalone-server.mjs",
+    "test": "node --experimental-strip-types --test tests/skills-smoke/*.test.mjs tests/unit/*.test.ts tests/integration/*.test.ts",
+    "test:smoke": "node --test tests/skills-smoke/*.test.mjs",
+    "test:domain": "node --experimental-strip-types --test tests/unit/*.test.ts",
+    "test:integration": "node --experimental-strip-types --test tests/integration/*.test.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "next": "^15.1.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "prisma": "^5.22.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
