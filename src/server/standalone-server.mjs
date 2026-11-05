@@ -925,17 +925,22 @@ function renderDashboardHtml(initialData) {
                   DESPESAS_FIXAS: 'Despesas Fixas',
                   DESPESAS_VARIAVEIS: 'Despesas Variáveis',
                 }[grp];
+                const btnConfig = {
+                  RECURSOS_FINANCEIROS: { id: 'btn-new-resource', label: '+ Nova Conta / Recurso' },
+                  RECEITAS: { id: 'btn-new-receitas', label: '+ Nova Receita' },
+                  INVESTIMENTOS: { id: 'btn-new-investimentos', label: '+ Novo Investimento' },
+                  DESPESAS_FIXAS: { id: 'btn-new-despesas-fixas', label: '+ Nova Despesa Fixa' },
+                  DESPESAS_VARIAVEIS: { id: 'btn-new-despesas-variaveis', label: '+ Nova Despesa Variável' },
+                }[grp];
 
                 return `
                   <tr class="finance-group-header">
                     <td colspan="9">
                       <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <span><strong>${groupLabel}</strong> (${groupLines.length} itens)</span>
-                        ${grp === 'RECURSOS_FINANCEIROS' ? `
-                          <button type="button" id="btn-new-resource" class="btn-primary" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
-                            + Nova Conta / Recurso
-                          </button>
-                        ` : ''}
+                        <button type="button" id="${btnConfig.id}" class="btn-primary btn-add-finance-line" data-group="${grp}" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+                          ${btnConfig.label}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -954,10 +959,8 @@ function renderDashboardHtml(initialData) {
                         <td style="white-space: nowrap;">
                           <div style="display: flex; gap: 0.35rem; align-items: center;">
                             <button class="btn-secondary btn-edit-entry" data-line-id="${l.id}" data-line-name="${l.name}" title="Editar Lançamento">Lançamento</button>
-                            ${l.group === 'RECURSOS_FINANCEIROS' ? `
-                              <button class="btn-secondary btn-edit-resource" data-line-id="${l.id}" data-line-name="${l.name}" data-line-profile="${l.profile}" data-line-months='${JSON.stringify(l.months)}' title="Editar Conta e Saldos">Editar</button>
-                              <button class="btn-danger btn-delete-resource" data-line-id="${l.id}" data-line-name="${l.name}" title="Excluir Conta">Excluir</button>
-                            ` : ''}
+                            <button class="btn-secondary btn-edit-resource btn-edit-line" data-line-id="${l.id}" data-line-name="${l.name}" data-line-profile="${l.profile}" data-line-group="${l.group}" data-line-subgroup="${l.subGroup || ''}" data-line-months='${JSON.stringify(l.months)}' title="Editar Linha e Meses">Editar</button>
+                            <button class="btn-danger btn-delete-resource btn-delete-line" data-line-id="${l.id}" data-line-name="${l.name}" data-line-group="${l.group}" title="Excluir Linha">Excluir</button>
                           </div>
                         </td>
                       </tr>
@@ -1315,22 +1318,39 @@ function renderDashboardHtml(initialData) {
     <!-- Modal Nova Conta / Recurso Financeiro / Liquid Lens Modal -->
     <div id="modal-new-resource" class="modal liquid-lens-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-new-resource-title">
       <div class="modal-content liquid-lens-modal">
-        <h3 id="modal-new-resource-title" class="modal-title">Nova Conta / Recurso Financeiro</h3>
+        <h3 id="modal-new-resource-title" class="modal-title">Nova Conta / Linha Financeira</h3>
         <form id="form-new-resource">
+          <input type="hidden" id="input-resource-group" name="group" value="RECURSOS_FINANCEIROS">
           <div class="form-group">
-            <label for="input-resource-name">Nome da Conta / Recurso:</label>
+            <label for="input-resource-name">Nome da Conta / Linha:</label>
             <input type="text" id="input-resource-name" name="name" required placeholder="Ex: Investimento CDB DI, Caixa Poupança, etc.">
           </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label for="select-resource-profile">Perfil:</label>
+              <select id="select-resource-profile" name="profile">
+                <option value="PF">Pessoa Física (PF)</option>
+                <option value="PJ">Pessoa Jurídica (PJ)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="select-resource-group">Grupo Financeiro:</label>
+              <select id="select-resource-group" name="groupSelect">
+                <option value="RECURSOS_FINANCEIROS">Recursos Financeiros</option>
+                <option value="RECEITAS">Receitas</option>
+                <option value="INVESTIMENTOS">Investimentos</option>
+                <option value="DESPESAS_FIXAS">Despesas Fixas</option>
+                <option value="DESPESAS_VARIAVEIS">Despesas Variáveis</option>
+              </select>
+            </div>
+          </div>
           <div class="form-group">
-            <label for="select-resource-profile">Perfil:</label>
-            <select id="select-resource-profile" name="profile">
-              <option value="PF">Pessoa Física (PF)</option>
-              <option value="PJ">Pessoa Jurídica (PJ)</option>
-            </select>
+            <label for="input-resource-subgroup">Categoria / Subgrupo (Opcional):</label>
+            <input type="text" id="input-resource-subgroup" name="subGroup" placeholder="Ex: Operacional, Lazer, Moradia...">
           </div>
           <div class="form-actions">
             <button type="button" id="btn-cancel-new-resource" class="btn-secondary">Cancelar</button>
-            <button type="submit" id="btn-submit-new-resource" class="btn-primary">Criar Recurso</button>
+            <button type="submit" id="btn-submit-new-resource" class="btn-primary">Criar Linha</button>
           </div>
         </form>
       </div>
@@ -1339,12 +1359,13 @@ function renderDashboardHtml(initialData) {
     <!-- Modal Editar Recurso Financeiro & Saldos / Liquid Lens Modal -->
     <div id="modal-edit-resource" class="modal liquid-lens-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-edit-resource-title">
       <div class="modal-content liquid-lens-modal liquid-lens-modal-wide">
-        <h3 id="modal-edit-resource-title" class="modal-title">Editar Recurso Financeiro & Saldos</h3>
+        <h3 id="modal-edit-resource-title" class="modal-title">Editar Linha Financeira & Saldos</h3>
         <form id="form-edit-resource">
           <input type="hidden" id="edit-resource-line-id" name="lineId">
+          <input type="hidden" id="edit-resource-group-val" name="group">
           <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
             <div class="form-group">
-              <label for="edit-resource-name">Nome da Conta:</label>
+              <label for="edit-resource-name">Nome da Conta / Linha:</label>
               <input type="text" id="edit-resource-name" name="name" required>
             </div>
             <div class="form-group">
@@ -1356,8 +1377,25 @@ function renderDashboardHtml(initialData) {
             </div>
           </div>
 
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label for="edit-resource-group-select">Grupo Financeiro:</label>
+              <select id="edit-resource-group-select" name="groupSelect">
+                <option value="RECURSOS_FINANCEIROS">Recursos Financeiros</option>
+                <option value="RECEITAS">Receitas</option>
+                <option value="INVESTIMENTOS">Investimentos</option>
+                <option value="DESPESAS_FIXAS">Despesas Fixas</option>
+                <option value="DESPESAS_VARIAVEIS">Despesas Variáveis</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="edit-resource-subgroup">Categoria / Subgrupo:</label>
+              <input type="text" id="edit-resource-subgroup" name="subGroup" placeholder="Ex: Operacional, Lazer...">
+            </div>
+          </div>
+
           <div class="form-group" style="margin-top: 0.5rem;">
-            <label><strong>Saldos Mensais (Jan..Dez) — Regra do Último Saldo Informado:</strong></label>
+            <label id="edit-resource-consolidation-label"><strong>Saldos Mensais (Jan..Dez) — Regra do Último Saldo Informado:</strong></label>
             <div class="months-balance-grid">
               ${['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((mName, idx) => {
                 const mNum = idx + 1;
@@ -1526,52 +1564,76 @@ function renderDashboardHtml(initialData) {
       }
     });
 
-    // Modal New Resource
-    const btnNewResource = document.getElementById('btn-new-resource');
+    // Modal New Resource / Line
     const modalNewResource = document.getElementById('modal-new-resource');
     const btnCancelNewResource = document.getElementById('btn-cancel-new-resource');
     const formNewResource = document.getElementById('form-new-resource');
 
-    if (btnNewResource && modalNewResource) {
-      btnNewResource.addEventListener('click', () => modalNewResource.classList.add('open'));
-      btnCancelNewResource?.addEventListener('click', () => modalNewResource.classList.remove('open'));
+    document.querySelectorAll('.btn-add-finance-line').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const grp = btn.getAttribute('data-group') || 'RECURSOS_FINANCEIROS';
+        const groupInput = document.getElementById('input-resource-group');
+        const groupSelect = document.getElementById('select-resource-group');
+        if (groupInput) groupInput.value = grp;
+        if (groupSelect) groupSelect.value = grp;
 
-      formNewResource?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const tenantId = document.getElementById('tenant-select').value;
-        const name = document.getElementById('input-resource-name').value;
-        const profile = document.getElementById('select-resource-profile').value;
-
-        try {
-          const res = await fetch('/api/v1/finance/line', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tenantId, name, profile, group: 'RECURSOS_FINANCEIROS' })
-          });
-          if (res.ok) {
-            modalNewResource.classList.remove('open');
-            formNewResource.reset();
-            window.location.reload();
-          } else {
-            const err = await res.json();
-            alert('Erro ao criar recurso: ' + (err.error || res.statusText));
-          }
-        } catch (err) {
-          alert('Erro ao criar recurso: ' + err.message);
+        const titleEl = document.getElementById('modal-new-resource-title');
+        if (titleEl) {
+          titleEl.textContent = grp === 'RECURSOS_FINANCEIROS'
+            ? 'Nova Conta / Recurso Financeiro'
+            : 'Novo Item — ' + (grp === 'RECEITAS' ? 'Receita' : grp === 'INVESTIMENTOS' ? 'Investimento' : grp === 'DESPESAS_FIXAS' ? 'Despesa Fixa' : 'Despesa Variável');
         }
+        modalNewResource?.classList.add('open');
       });
-    }
+    });
 
-    // Modal Edit Resource & Balances
+    const selectResourceGroup = document.getElementById('select-resource-group');
+    selectResourceGroup?.addEventListener('change', (e) => {
+      const groupInput = document.getElementById('input-resource-group');
+      if (groupInput) groupInput.value = e.target.value;
+    });
+
+    btnCancelNewResource?.addEventListener('click', () => modalNewResource?.classList.remove('open'));
+
+    formNewResource?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const tenantId = document.getElementById('tenant-select').value;
+      const name = document.getElementById('input-resource-name').value;
+      const profile = document.getElementById('select-resource-profile').value;
+      const group = document.getElementById('input-resource-group')?.value || 'RECURSOS_FINANCEIROS';
+      const subGroup = document.getElementById('input-resource-subgroup')?.value || undefined;
+
+      try {
+        const res = await fetch('/api/v1/finance/line', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenantId, name, profile, group, subGroup })
+        });
+        if (res.ok) {
+          modalNewResource.classList.remove('open');
+          formNewResource.reset();
+          window.location.reload();
+        } else {
+          const err = await res.json();
+          alert('Erro ao criar linha: ' + (err.error || res.statusText));
+        }
+      } catch (err) {
+        alert('Erro ao criar linha: ' + err.message);
+      }
+    });
+
+    // Modal Edit Resource & Balances (Linhas e Meses Jan..Dez)
     const modalEditResource = document.getElementById('modal-edit-resource');
     const btnCancelEditResource = document.getElementById('btn-cancel-edit-resource');
     const formEditResource = document.getElementById('form-edit-resource');
 
-    document.querySelectorAll('.btn-edit-resource').forEach(btn => {
+    document.querySelectorAll('.btn-edit-resource, .btn-edit-line').forEach(btn => {
       btn.addEventListener('click', () => {
         const lineId = btn.getAttribute('data-line-id');
         const lineName = btn.getAttribute('data-line-name');
         const lineProfile = btn.getAttribute('data-line-profile');
+        const lineGroup = btn.getAttribute('data-line-group') || 'RECURSOS_FINANCEIROS';
+        const lineSubGroup = btn.getAttribute('data-line-subgroup') || '';
         let months = {};
         try {
           months = JSON.parse(btn.getAttribute('data-line-months') || '{}');
@@ -1582,6 +1644,19 @@ function renderDashboardHtml(initialData) {
         document.getElementById('edit-resource-line-id').value = lineId;
         document.getElementById('edit-resource-name').value = lineName;
         document.getElementById('edit-resource-profile').value = lineProfile;
+        const grpVal = document.getElementById('edit-resource-group-val');
+        if (grpVal) grpVal.value = lineGroup;
+        const grpSelect = document.getElementById('edit-resource-group-select');
+        if (grpSelect) grpSelect.value = lineGroup;
+        const subGroupInput = document.getElementById('edit-resource-subgroup');
+        if (subGroupInput) subGroupInput.value = lineSubGroup;
+
+        const labelEl = document.getElementById('edit-resource-consolidation-label');
+        if (labelEl) {
+          labelEl.innerHTML = lineGroup === 'RECURSOS_FINANCEIROS'
+            ? '<strong>Saldos Mensais (Jan..Dez) — Regra do Último Saldo Informado:</strong>'
+            : '<strong>Valores Mensais (Jan..Dez) — Consolidação por Soma Acumulada Anual (DRE / Fluxo):</strong>';
+        }
 
         for (let m = 1; m <= 12; m++) {
           const entry = months[m] || { realized: 0, target: 0 };
@@ -1595,6 +1670,12 @@ function renderDashboardHtml(initialData) {
       });
     });
 
+    const editResourceGroupSelect = document.getElementById('edit-resource-group-select');
+    editResourceGroupSelect?.addEventListener('change', (e) => {
+      const grpVal = document.getElementById('edit-resource-group-val');
+      if (grpVal) grpVal.value = e.target.value;
+    });
+
     btnCancelEditResource?.addEventListener('click', () => {
       modalEditResource.classList.remove('open');
     });
@@ -1605,6 +1686,8 @@ function renderDashboardHtml(initialData) {
       const lineId = document.getElementById('edit-resource-line-id').value;
       const name = document.getElementById('edit-resource-name').value;
       const profile = document.getElementById('edit-resource-profile').value;
+      const group = document.getElementById('edit-resource-group-val')?.value;
+      const subGroup = document.getElementById('edit-resource-subgroup')?.value || undefined;
 
       const months = {};
       for (let m = 1; m <= 12; m++) {
@@ -1620,27 +1703,27 @@ function renderDashboardHtml(initialData) {
         const res = await fetch('/api/v1/finance/line', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenantId, lineId, name, profile, months })
+          body: JSON.stringify({ tenantId, lineId, name, profile, group, subGroup, months })
         });
         if (res.ok) {
           modalEditResource.classList.remove('open');
           window.location.reload();
         } else {
           const err = await res.json();
-          alert('Erro ao atualizar recurso: ' + (err.error || res.statusText));
+          alert('Erro ao atualizar linha: ' + (err.error || res.statusText));
         }
       } catch (err) {
-        alert('Erro ao atualizar recurso: ' + err.message);
+        alert('Erro ao atualizar linha: ' + err.message);
       }
     });
 
-    // Delete Resource Line
-    document.querySelectorAll('.btn-delete-resource').forEach(btn => {
+    // Delete Line (Remoção imediata da grade e feedback sem recarregar página - AC-4)
+    document.querySelectorAll('.btn-delete-resource, .btn-delete-line').forEach(btn => {
       btn.addEventListener('click', async () => {
         const lineId = btn.getAttribute('data-line-id');
         const lineName = btn.getAttribute('data-line-name');
         const tenantId = document.getElementById('tenant-select').value;
-        if (confirm('Deseja realmente excluir a conta "' + lineName + '"?')) {
+        if (confirm('Deseja realmente excluir "' + lineName + '"?')) {
           try {
             const res = await fetch('/api/v1/finance/line', {
               method: 'DELETE',
@@ -1648,13 +1731,16 @@ function renderDashboardHtml(initialData) {
               body: JSON.stringify({ tenantId, lineId })
             });
             if (res.ok) {
-              window.location.reload();
+              const tr = btn.closest('tr');
+              if (tr) {
+                tr.remove();
+              }
             } else {
               const err = await res.json();
-              alert('Erro ao excluir conta: ' + (err.error || res.statusText));
+              alert('Erro ao excluir item: ' + (err.error || res.statusText));
             }
           } catch (err) {
-            alert('Erro ao excluir conta: ' + err.message);
+            alert('Erro ao excluir item: ' + err.message);
           }
         }
       });

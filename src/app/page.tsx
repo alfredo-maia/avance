@@ -8,45 +8,113 @@ import {
   LiquidLensBadge,
 } from '../components/liquid-lens/index.ts';
 
-interface ResourceAccount {
+export type FinancialGroup =
+  | 'RECURSOS_FINANCEIROS'
+  | 'RECEITAS'
+  | 'INVESTIMENTOS'
+  | 'DESPESAS_FIXAS'
+  | 'DESPESAS_VARIAVEIS';
+
+export interface FinancialLineAccount {
   id: string;
   name: string;
   profile: 'PF' | 'PJ';
+  group: FinancialGroup;
+  subGroup?: string;
   months: Record<number, { realized: number; target: number }>;
 }
 
+export type ResourceAccount = FinancialLineAccount;
+
 /**
- * Página principal do SaaS Multi-Tenant no Next.js App Router (ADR-0002 / AV-98 / AV-100)
+ * Página principal do SaaS Multi-Tenant no Next.js App Router (ADR-0002 / AV-98 / AV-100 / AV-101)
  * Renderiza interface dos 4 módulos com componentes Liquid Lens / Liquid Glass UI
- * e gestão completa de recursos financeiros.
+ * e gestão completa de todos os 5 grupos financeiros (CRUD, Jan..Dez inline e DRE em tempo real).
  */
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<string>('tab-finance');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState<boolean>(false);
   const [isEditResourceModalOpen, setIsEditResourceModalOpen] = useState<boolean>(false);
+  const [targetGroupForNew, setTargetGroupForNew] = useState<FinancialGroup>('RECURSOS_FINANCEIROS');
   const [tenantName, setTenantName] = useState<string>('Avance Matriz');
   const [tenantPlan, setTenantPlan] = useState<string>('PRO');
-  const [editingResource, setEditingResource] = useState<ResourceAccount | null>(null);
+  const [editingResource, setEditingResource] = useState<FinancialLineAccount | null>(null);
 
-  const [resources, setResources] = useState<ResourceAccount[]>([
+  const [financialLines, setFinancialLines] = useState<FinancialLineAccount[]>([
+    // 1. RECURSOS FINANCEIROS
     {
       id: 'res-1',
       name: 'Banco do Brasil Corrente',
       profile: 'PF',
+      group: 'RECURSOS_FINANCEIROS',
       months: { 1: { realized: 25000, target: 20000 }, 2: { realized: 27500, target: 25000 } },
     },
     {
       id: 'res-2',
       name: 'Nubank PF CDB/Caixinha',
       profile: 'PF',
+      group: 'RECURSOS_FINANCEIROS',
       months: { 1: { realized: 80000, target: 75000 } },
     },
     {
       id: 'res-3',
       name: 'Nubank PJ Corrente',
       profile: 'PJ',
+      group: 'RECURSOS_FINANCEIROS',
       months: { 1: { realized: 15000, target: 12000 } },
+    },
+    // 2. RECEITAS
+    {
+      id: 'rec-1',
+      name: 'Salário & Pró-labore',
+      profile: 'PF',
+      group: 'RECEITAS',
+      subGroup: 'Trabalho',
+      months: { 1: { realized: 12000, target: 12000 }, 2: { realized: 12000, target: 12000 } },
+    },
+    {
+      id: 'rec-2',
+      name: 'Contratos Mensais SaaS',
+      profile: 'PJ',
+      group: 'RECEITAS',
+      subGroup: 'Serviços',
+      months: { 1: { realized: 20000, target: 18000 }, 2: { realized: 22000, target: 20000 } },
+    },
+    // 3. INVESTIMENTOS
+    {
+      id: 'inv-1',
+      name: 'Aporte Tesouro Direto Selic',
+      profile: 'PF',
+      group: 'INVESTIMENTOS',
+      subGroup: 'Renda Fixa',
+      months: { 1: { realized: 2500, target: 2500 } },
+    },
+    // 4. DESPESAS FIXAS
+    {
+      id: 'fix-1',
+      name: 'Aluguel & Condomínio',
+      profile: 'PF',
+      group: 'DESPESAS_FIXAS',
+      subGroup: 'Moradia',
+      months: { 1: { realized: 2200, target: 2200 } },
+    },
+    {
+      id: 'fix-2',
+      name: 'Infraestrutura Cloud AWS',
+      profile: 'PJ',
+      group: 'DESPESAS_FIXAS',
+      subGroup: 'Operacional',
+      months: { 1: { realized: 1500, target: 1400 } },
+    },
+    // 5. DESPESAS VARIÁVEIS
+    {
+      id: 'var-1',
+      name: 'Cartão Alimentação & Mercado',
+      profile: 'PF',
+      group: 'DESPESAS_VARIAVEIS',
+      subGroup: 'Alimentação',
+      months: { 1: { realized: 1800, target: 1500 } },
     },
   ]);
 
@@ -69,25 +137,34 @@ export default function DashboardPage() {
     }
   };
 
+  const handleOpenAddModal = (group: FinancialGroup) => {
+    setTargetGroupForNew(group);
+    setIsResourceModalOpen(true);
+  };
+
   const handleAddResource = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
     const profile = (formData.get('profile') as 'PF' | 'PJ') || 'PF';
+    const group = (formData.get('group') as FinancialGroup) || targetGroupForNew;
+    const subGroup = (formData.get('subGroup') as string) || undefined;
 
     if (name) {
-      const newRes: ResourceAccount = {
-        id: `res-${Date.now()}`,
+      const newLine: FinancialLineAccount = {
+        id: `line-${Date.now()}`,
         name,
         profile,
+        group,
+        subGroup,
         months: {},
       };
-      setResources((prev) => [...prev, newRes]);
+      setFinancialLines((prev) => [...prev, newLine]);
       setIsResourceModalOpen(false);
     }
   };
 
-  const handleOpenEditResource = (res: ResourceAccount) => {
+  const handleOpenEditResource = (res: FinancialLineAccount) => {
     setEditingResource(res);
     setIsEditResourceModalOpen(true);
   };
@@ -99,6 +176,8 @@ export default function DashboardPage() {
     const formData = new FormData(e.currentTarget);
     const name = (formData.get('name') as string) || editingResource.name;
     const profile = (formData.get('profile') as 'PF' | 'PJ') || editingResource.profile;
+    const group = (formData.get('group') as FinancialGroup) || editingResource.group;
+    const subGroup = (formData.get('subGroup') as string) || editingResource.subGroup;
 
     const updatedMonths: Record<number, { realized: number; target: number }> = {};
     for (let m = 1; m <= 12; m++) {
@@ -110,10 +189,10 @@ export default function DashboardPage() {
       };
     }
 
-    setResources((prev) =>
+    setFinancialLines((prev) =>
       prev.map((r) =>
         r.id === editingResource.id
-          ? { ...r, name, profile, months: updatedMonths }
+          ? { ...r, name, profile, group, subGroup, months: updatedMonths }
           : r
       )
     );
@@ -122,13 +201,13 @@ export default function DashboardPage() {
   };
 
   const handleDeleteResource = (id: string, name: string) => {
-    if (confirm(`Deseja realmente excluir a conta "${name}"?`)) {
-      setResources((prev) => prev.filter((r) => r.id !== id));
+    if (confirm(`Deseja realmente excluir "${name}"?`)) {
+      setFinancialLines((prev) => prev.filter((r) => r.id !== id));
     }
   };
 
-  // Calcula último saldo informado para cada recurso
-  const getLastBalance = (res: ResourceAccount): number => {
+  // Regra do Último Saldo Informado para Recursos Financeiros
+  const getLastBalance = (res: FinancialLineAccount): number => {
     for (let m = 12; m >= 1; m--) {
       const val = res.months[m]?.realized ?? 0;
       if (val > 0) return val;
@@ -136,7 +215,100 @@ export default function DashboardPage() {
     return 0;
   };
 
-  const totalPatrimony = resources.reduce((acc, r) => acc + getLastBalance(r), 0);
+  // Regra da Soma Acumulada Anual dos 12 Meses para grupos de Fluxo
+  const getAnnualSum = (line: FinancialLineAccount): number => {
+    let sum = 0;
+    for (let m = 1; m <= 12; m++) {
+      sum += line.months[m]?.realized ?? 0;
+    }
+    return sum;
+  };
+
+  // Cálculos dinâmicos em tempo real para o mês 1 (DRE & KPIs)
+  const refMonth = 1;
+  const monthRevenue = financialLines
+    .filter((l) => l.group === 'RECEITAS')
+    .reduce((sum, l) => sum + (l.months[refMonth]?.realized ?? 0), 0);
+
+  const monthInvestments = financialLines
+    .filter((l) => l.group === 'INVESTIMENTOS')
+    .reduce((sum, l) => sum + (l.months[refMonth]?.realized ?? 0), 0);
+
+  const monthFixedExpenses = financialLines
+    .filter((l) => l.group === 'DESPESAS_FIXAS')
+    .reduce((sum, l) => sum + (l.months[refMonth]?.realized ?? 0), 0);
+
+  const monthVariableExpenses = financialLines
+    .filter((l) => l.group === 'DESPESAS_VARIAVEIS')
+    .reduce((sum, l) => sum + (l.months[refMonth]?.realized ?? 0), 0);
+
+  const monthFinalResult =
+    monthRevenue - monthInvestments - monthFixedExpenses - monthVariableExpenses;
+
+  let accumulatedResultYear = 0;
+  for (let m = 1; m <= 12; m++) {
+    const rev = financialLines
+      .filter((l) => l.group === 'RECEITAS')
+      .reduce((s, l) => s + (l.months[m]?.realized ?? 0), 0);
+    const inv = financialLines
+      .filter((l) => l.group === 'INVESTIMENTOS')
+      .reduce((s, l) => s + (l.months[m]?.realized ?? 0), 0);
+    const fix = financialLines
+      .filter((l) => l.group === 'DESPESAS_FIXAS')
+      .reduce((s, l) => s + (l.months[m]?.realized ?? 0), 0);
+    const v = financialLines
+      .filter((l) => l.group === 'DESPESAS_VARIAVEIS')
+      .reduce((s, l) => s + (l.months[m]?.realized ?? 0), 0);
+    accumulatedResultYear += rev - inv - fix - v;
+  }
+
+  const totalPatrimony = financialLines
+    .filter((l) => l.group === 'RECURSOS_FINANCEIROS')
+    .reduce((acc, r) => acc + getLastBalance(r), 0);
+
+  const groupsConfig: Array<{
+    group: FinancialGroup;
+    title: string;
+    btnId: string;
+    btnLabel: string;
+    isBalanceGroup: boolean;
+  }> = [
+    {
+      group: 'RECURSOS_FINANCEIROS',
+      title: '1. Recursos Financeiros & Saldos (Último Saldo Informado)',
+      btnId: 'btn-new-resource',
+      btnLabel: '+ Nova Conta / Recurso',
+      isBalanceGroup: true,
+    },
+    {
+      group: 'RECEITAS',
+      title: '2. Receitas (Soma Acumulada Anual)',
+      btnId: 'btn-new-receitas',
+      btnLabel: '+ Nova Receita',
+      isBalanceGroup: false,
+    },
+    {
+      group: 'INVESTIMENTOS',
+      title: '3. Investimentos (Soma Acumulada Anual)',
+      btnId: 'btn-new-investimentos',
+      btnLabel: '+ Novo Investimento',
+      isBalanceGroup: false,
+    },
+    {
+      group: 'DESPESAS_FIXAS',
+      title: '4. Despesas Fixas (Soma Acumulada Anual)',
+      btnId: 'btn-new-despesas-fixas',
+      btnLabel: '+ Nova Despesa Fixa',
+      isBalanceGroup: false,
+    },
+    {
+      group: 'DESPESAS_VARIAVEIS',
+      title: '5. Despesas Variáveis (Soma Acumulada Anual)',
+      btnId: 'btn-new-despesas-variaveis',
+      btnLabel: '+ Nova Despesa Variável',
+      isBalanceGroup: false,
+    },
+  ];
 
   return (
     <main className="app-wrapper">
@@ -158,7 +330,11 @@ export default function DashboardPage() {
         <div className="header-controls">
           <div className="control-group">
             <label htmlFor="tenant-select">Tenant:</label>
-            <select id="tenant-select" value={tenantName} onChange={(e) => setTenantName(e.target.value)}>
+            <select
+              id="tenant-select"
+              value={tenantName}
+              onChange={(e) => setTenantName(e.target.value)}
+            >
               <option value={tenantName}>{tenantName}</option>
             </select>
           </div>
@@ -184,14 +360,33 @@ export default function DashboardPage() {
       {activeTab === 'tab-finance' && (
         <section id="panel-finance" className="tab-panel" style={{ display: 'block' }}>
           <div className="kpi-grid">
-            <LiquidLensCard id="kpi-received" title="Recebido no Mês" value="R$ 12.000,00" variant="success" />
+            <LiquidLensCard
+              id="kpi-received"
+              title="Recebido no Mês"
+              value={`R$ ${monthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+              variant="success"
+            />
             <LiquidLensCard id="kpi-to-receive" title="A Receber no Mês" value="R$ 0,00" />
-            <LiquidLensCard id="kpi-paid" title="Pago no Mês" value="R$ 1.200,00" />
-            <LiquidLensCard id="kpi-to-pay" title="A Pagar no Mês" value="R$ 3.500,00" />
-            <LiquidLensCard id="kpi-overdue-count" title="Contas Atrasadas" value="1 conta" variant="danger" />
-            <LiquidLensCard id="kpi-overdue-amount" title="Valor em Atraso" value="R$ 450,00" variant="danger" />
-            <LiquidLensCard id="kpi-month-result" title="Resultado Final do Mês" value="R$ 10.800,00" variant="success" />
-            <LiquidLensCard id="kpi-accumulated-result" title="Resultado Acumulado Ano" value="R$ 10.800,00" variant="success" />
+            <LiquidLensCard
+              id="kpi-paid"
+              title="Pago no Mês (Despesas)"
+              value={`R$ ${(monthFixedExpenses + monthVariableExpenses).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+            />
+            <LiquidLensCard id="kpi-to-pay" title="A Pagar no Mês" value="R$ 0,00" />
+            <LiquidLensCard id="kpi-overdue-count" title="Contas Atrasadas" value="0 contas" />
+            <LiquidLensCard id="kpi-overdue-amount" title="Valor em Atraso" value="R$ 0,00" />
+            <LiquidLensCard
+              id="kpi-month-result"
+              title="Resultado Final do Mês (DRE)"
+              value={`R$ ${monthFinalResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+              variant={monthFinalResult >= 0 ? 'success' : 'danger'}
+            />
+            <LiquidLensCard
+              id="kpi-accumulated-result"
+              title="Resultado Acumulado Ano"
+              value={`R$ ${accumulatedResultYear.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+              variant={accumulatedResultYear >= 0 ? 'success' : 'danger'}
+            />
             <LiquidLensCard
               id="kpi-patrimony-balance"
               title="Patrimônio (Último Saldo)"
@@ -199,69 +394,107 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Gestão de Recursos Financeiros (AV-100) */}
-          <div className="section-card liquid-lens" style={{ marginBottom: '1.25rem' }}>
-            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 className="section-title">Recursos Financeiros & Saldos (Último Saldo Informado)</h2>
-              <button
-                type="button"
-                id="btn-new-resource"
-                className="btn-primary"
-                onClick={() => setIsResourceModalOpen(true)}
+          {/* Gestão dos 5 Grupos Financeiros (AV-100 / AV-101) */}
+          {groupsConfig.map((grp) => {
+            const lines = financialLines.filter((l) => l.group === grp.group);
+            return (
+              <div
+                key={grp.group}
+                className="section-card liquid-lens"
+                style={{ marginBottom: '1.25rem' }}
               >
-                + Nova Conta / Recurso
-              </button>
-            </div>
+                <div
+                  className="section-header"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  <h2 className="section-title">{grp.title}</h2>
+                  <button
+                    type="button"
+                    id={grp.btnId}
+                    className="btn-primary"
+                    onClick={() => handleOpenAddModal(grp.group)}
+                  >
+                    {grp.btnLabel}
+                  </button>
+                </div>
 
-            <div className="table-responsive">
-              <table className="data-table" aria-label="Recursos Financeiros">
-                <thead>
-                  <tr>
-                    <th scope="col">Conta / Recurso</th>
-                    <th scope="col">Perfil</th>
-                    <th scope="col">Último Saldo Informado</th>
-                    <th scope="col">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resources.map((r) => {
-                    const balance = getLastBalance(r);
-                    return (
-                      <tr key={r.id}>
-                        <td><strong>{r.name}</strong></td>
-                        <td>
-                          <span className={`badge ${r.profile === 'PF' ? 'badge-plan' : 'status-pending'}`}>
-                            {r.profile}
-                          </span>
-                        </td>
-                        <td>
-                          <strong>R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '0.4rem' }}>
-                            <button
-                              type="button"
-                              className="btn-secondary"
-                              onClick={() => handleOpenEditResource(r)}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-danger"
-                              onClick={() => handleDeleteResource(r.id, r.name)}
-                            >
-                              Excluir
-                            </button>
-                          </div>
-                        </td>
+                <div className="table-responsive">
+                  <table className="data-table" aria-label={grp.title}>
+                    <thead>
+                      <tr>
+                        <th scope="col">Conta / Linha</th>
+                        <th scope="col">Perfil</th>
+                        <th scope="col">Subgrupo / Categoria</th>
+                        <th scope="col">
+                          {grp.isBalanceGroup ? 'Último Saldo Informado' : 'Total Anual (Soma)'}
+                        </th>
+                        <th scope="col">Ações</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                    </thead>
+                    <tbody>
+                      {lines.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', opacity: 0.6 }}>
+                            Nenhum item cadastrado neste grupo.
+                          </td>
+                        </tr>
+                      ) : (
+                        lines.map((r) => {
+                          const totalVal = grp.isBalanceGroup ? getLastBalance(r) : getAnnualSum(r);
+                          return (
+                            <tr key={r.id} data-group={r.group}>
+                              <td>
+                                <strong>{r.name}</strong>
+                              </td>
+                              <td>
+                                <span
+                                  className={`badge ${r.profile === 'PF' ? 'badge-plan' : 'status-pending'}`}
+                                >
+                                  {r.profile}
+                                </span>
+                              </td>
+                              <td>{r.subGroup || '—'}</td>
+                              <td>
+                                <strong>
+                                  R${' '}
+                                  {totalVal.toLocaleString('pt-BR', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </strong>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary btn-edit-line"
+                                    onClick={() => handleOpenEditResource(r)}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-danger btn-delete-line"
+                                    onClick={() => handleDeleteResource(r.id, r.name)}
+                                  >
+                                    Excluir
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
 
           <div className="section-card liquid-lens">
             <div className="section-header">
@@ -324,7 +557,13 @@ export default function DashboardPage() {
         <form onSubmit={handleCreateTenant}>
           <div className="form-group">
             <label htmlFor="input-tenant-name">Nome da Empresa / Tenant:</label>
-            <input type="text" id="input-tenant-name" name="name" required placeholder="Ex: Acme Corp" />
+            <input
+              type="text"
+              id="input-tenant-name"
+              name="name"
+              required
+              placeholder="Ex: Minha Empresa Ltda"
+            />
           </div>
           <div className="form-group">
             <label htmlFor="select-tenant-plan">Plano de Assinatura:</label>
@@ -349,22 +588,23 @@ export default function DashboardPage() {
         </form>
       </LiquidLensModal>
 
-      {/* Modal Nova Conta / Recurso Financeiro */}
+      {/* Modal Nova Conta / Linha Financeira */}
       <LiquidLensModal
         id="modal-new-resource"
         isOpen={isResourceModalOpen}
         onClose={() => setIsResourceModalOpen(false)}
-        title="Nova Conta / Recurso Financeiro"
+        title={`Nova Conta / Linha (${targetGroupForNew})`}
       >
         <form onSubmit={handleAddResource}>
+          <input type="hidden" name="group" value={targetGroupForNew} />
           <div className="form-group">
-            <label htmlFor="input-new-resource-name">Nome da Conta / Recurso:</label>
+            <label htmlFor="input-new-resource-name">Nome da Conta / Linha:</label>
             <input
               type="text"
               id="input-new-resource-name"
               name="name"
               required
-              placeholder="Ex: CDB Liquidez Diária, Banco Inter, etc."
+              placeholder="Ex: Salário, Aluguel, CDB DI, etc."
             />
           </div>
           <div className="form-group">
@@ -373,6 +613,15 @@ export default function DashboardPage() {
               <option value="PF">Pessoa Física (PF)</option>
               <option value="PJ">Pessoa Jurídica (PJ)</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="input-new-resource-subgroup">Subgrupo / Categoria (Opcional):</label>
+            <input
+              type="text"
+              id="input-new-resource-subgroup"
+              name="subGroup"
+              placeholder="Ex: Moradia, Trabalho, Serviços..."
+            />
           </div>
           <div className="form-actions">
             <button
@@ -383,13 +632,13 @@ export default function DashboardPage() {
               Cancelar
             </button>
             <button type="submit" className="btn-primary">
-              Criar Recurso
+              Criar Linha
             </button>
           </div>
         </form>
       </LiquidLensModal>
 
-      {/* Modal Editar Recurso & Saldos */}
+      {/* Modal Editar Linha Financeira & Meses Jan..Dez */}
       {editingResource && (
         <LiquidLensModal
           id="modal-edit-resource"
@@ -398,11 +647,12 @@ export default function DashboardPage() {
             setIsEditResourceModalOpen(false);
             setEditingResource(null);
           }}
-          title="Editar Recurso Financeiro & Saldos"
+          title={`Editar Linha — ${editingResource.name} (${editingResource.group})`}
         >
           <form onSubmit={handleSaveEditResource}>
+            <input type="hidden" name="group" value={editingResource.group} />
             <div className="form-group">
-              <label htmlFor="edit-modal-name">Nome da Conta:</label>
+              <label htmlFor="edit-modal-name">Nome:</label>
               <input
                 type="text"
                 id="edit-modal-name"
@@ -422,16 +672,62 @@ export default function DashboardPage() {
                 <option value="PJ">Pessoa Jurídica (PJ)</option>
               </select>
             </div>
+            <div className="form-group">
+              <label htmlFor="edit-modal-subgroup">Subgrupo / Categoria:</label>
+              <input
+                type="text"
+                id="edit-modal-subgroup"
+                name="subGroup"
+                defaultValue={editingResource.subGroup || ''}
+                placeholder="Ex: Moradia, Operacional..."
+              />
+            </div>
 
             <div className="form-group" style={{ marginTop: '0.75rem' }}>
-              <label><strong>Saldos Mensais (Jan..Dez):</strong></label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.4rem', maxHeight: '200px', overflowY: 'auto' }}>
-                {['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((mName, idx) => {
+              <label>
+                <strong>
+                  {editingResource.group === 'RECURSOS_FINANCEIROS'
+                    ? 'Saldos Mensais (Jan..Dez) — Regra do Último Saldo Informado:'
+                    : 'Valores Mensais (Jan..Dez) — Consolidação por Soma Acumulada Anual (DRE):'}
+                </strong>
+              </label>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '0.4rem',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                }}
+              >
+                {[
+                  'Jan',
+                  'Fev',
+                  'Mar',
+                  'Abr',
+                  'Mai',
+                  'Jun',
+                  'Jul',
+                  'Ago',
+                  'Set',
+                  'Out',
+                  'Nov',
+                  'Dez',
+                ].map((mName, idx) => {
                   const m = idx + 1;
                   const cur = editingResource.months[m] || { realized: 0, target: 0 };
                   return (
-                    <div key={m} style={{ padding: '0.35rem', background: 'rgba(255,255,255,0.2)', borderRadius: '6px' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{m} - {mName}</span>
+                    <div
+                      key={m}
+                      style={{
+                        padding: '0.35rem',
+                        background: 'rgba(255,255,255,0.2)',
+                        borderRadius: '6px',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                        {m} - {mName}
+                      </span>
                       <input
                         type="number"
                         step="0.01"
