@@ -1,12 +1,12 @@
-# 0003. Pipeline de CI/CD Automatizado no GitHub Actions com Gates Obrigatórios e Deploy Homologação/Produção
+# 0003. Pipeline de CI/CD Automatizado no GitHub Actions com Gates Obrigatórios e Deploy Direto em Produção
 
 Status: accepted
 
-Estruturamos o pipeline de integração contínua (CI) e entrega contínua (CD) do **Avance SaaS Multi-Tenant** no GitHub Actions (`.github/workflows/ci.yml`), conforme os requisitos de engenharia e a governança multiagente (`AV-99` e `GOVERNANCE.md`).
+Estruturamos o pipeline de integração contínua (CI) e entrega contínua (CD) do **Avance SaaS Multi-Tenant** no GitHub Actions (`.github/workflows/ci.yml`), conforme os requisitos de engenharia, direcionamento executivo e a governança multiagente (`AV-99` e `GOVERNANCE.md`).
 
 ## 1. Disparadores e Concorrência
 
-- **Triggers**: Executado automaticamente em `push` e `pull_request` contra a branch `main`, além de acionamento manual controlado via `workflow_dispatch` com parâmetro de ambiente (`homologacao` ou `producao`).
+- **Triggers**: Executado automaticamente em `push` e `pull_request` contra a branch `main`, além de acionamento manual controlado via `workflow_dispatch` direcionado para `producao`.
 - **Concorrência**: Grupo de concorrência com cancelamento automático de execuções redundantes para pull requests (`cancel-in-progress: true`), otimizando capacidade e evitando corridas de estado.
 
 ## 2. Etapas e Checagens Obrigatórias (Quality Gate)
@@ -25,8 +25,8 @@ O job inicial `quality-gate` atua como barreira inegociável de qualidade antes 
 - **Isolamento e Segurança**: Constrói a imagem Docker baseada no `Dockerfile` oficial (`node:22-alpine` com usuário não-privilegiado `avance` e healthcheck HTTP em `/api/v1/tenants`).
 - **Validação de Inicialização**: Sobe temporariamente o container recém-construído e aguarda o status `healthy` antes de validar o artefato.
 
-## 4. Portões de Entrega e Publicação (`deploy-staging` e `deploy-production`)
+## 4. Portão de Entrega Direta em Produção (`deploy-production`)
 
-- **Garantia de CI Verde**: Nenhum código transita para homologação ou produção sem a aprovação estrita dos jobs anteriores (`needs: [quality-gate, docker-build]`).
-- **Homologação (`deploy-staging`)**: Acionada automaticamente após merge na `main` ou via `workflow_dispatch`, realizando a implantação automatizada no ambiente pré-produtivo.
-- **Produção (`deploy-production`)**: Depende de `quality-gate`, `docker-build` e `deploy-staging`. Protegida pelo ambiente `producao` com conformidade às alçadas de `GOVERNANCE.md` (autorização técnica de Alfredo / Tech Lead com checks obrigatórios no SHA final e plano de reversão ativo). Pull requests nunca disparam entregas produtivas.
+- **Garantia de CI Verde**: Nenhum código transita para produção sem a aprovação estrita dos jobs anteriores (`needs: [quality-gate, docker-build]`).
+- **Deploy em Produção**: Conforme autorização e diretriz executiva de Alfredo ("O deploy pode ser em produção não em staging"), o deploy é realizado diretamente no ambiente `producao` após CI verde em push na branch `main` ou via `workflow_dispatch`.
+- **Governança**: O job é protegido pelo ambiente `producao` com conformidade às alçadas de `GOVERNANCE.md` (autorização da Direção com checks obrigatórios no SHA final e plano de reversão ativo). Pull requests executam apenas o `quality-gate` e nunca disparam entregas produtivas.

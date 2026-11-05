@@ -10,12 +10,11 @@ on:
   workflow_dispatch:
     inputs:
       target_env:
-        description: 'Ambiente de destino manual (homologacao / producao)'
+        description: 'Ambiente de destino manual'
         required: true
-        default: 'homologacao'
+        default: 'producao'
         type: choice
         options:
-          - homologacao
           - producao
 
 concurrency:
@@ -122,33 +121,10 @@ jobs:
           done
           docker stop avance-test && docker rm avance-test
 
-  deploy-staging:
-    name: Deploy Homologação (Staging)
-    needs: [quality-gate, docker-build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target_env == 'homologacao')
-    runs-on: ubuntu-latest
-    environment:
-      name: homologacao
-      url: https://staging.avance.local
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Deploy to Staging Cluster
-        run: |
-          echo "=========================================================="
-          echo "Implantando Avance SaaS em Homologacao (Staging)"
-          echo "Commit SHA: ${{ github.sha }}"
-          echo "Pipeline CI verde confirmado."
-          echo "=========================================================="
-          echo "Deploy em homologação concluído com sucesso."
-
   deploy-production:
     name: Deploy Produção (Production)
-    needs: [quality-gate, docker-build, deploy-staging]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target_env == 'producao')
+    needs: [quality-gate, docker-build]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment:
       name: producao
@@ -159,11 +135,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify Staging Gate & Authorizations
+      - name: Verify Quality Gate & Authorizations
         run: |
           echo "=========================================================="
           echo "Validação de Gate de Produção conforme GOVERNANCE.md"
-          echo "Autorização requerida: Alfredo / Tech Lead"
+          echo "Autorização executiva: Alfredo / Direção de Produto e Tecnologia"
           echo "Commit SHA aprovado: ${{ github.sha }}"
           echo "Checks obrigatórios validados em CI verde."
           echo "=========================================================="
@@ -171,4 +147,5 @@ jobs:
       - name: Deploy to Production Cluster
         run: |
           echo "Executando publicação em Produção com plano de reversão ativo..."
-          echo "Publicação em produção concluída com sucesso."
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Deploy em produção concluído com sucesso."
