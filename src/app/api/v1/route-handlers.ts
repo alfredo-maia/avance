@@ -4,7 +4,14 @@
  */
 
 import type { SaaSStore } from '../../../server/saas-store.ts';
-import type { SaaSPlan, FinancialGroup, GoalCategory, IndicatorTrackingType } from '../../../domain/types.ts';
+import type {
+  SaaSPlan,
+  FinancialGroup,
+  ProfileType,
+  MonthlyTriad,
+  GoalCategory,
+  IndicatorTrackingType,
+} from '../../../domain/types.ts';
 
 export interface ApiResponse<T = any> {
   status: number;
@@ -102,6 +109,82 @@ export function createApiRouteHandlers(store: SaaSStore) {
         return { status: 200, data: updated };
       } catch (err: any) {
         return { status: 404, error: err.message };
+      }
+    },
+
+    async handlePostFinanceLine(body: {
+      tenantId: string;
+      name: string;
+      profile?: ProfileType;
+      group?: FinancialGroup;
+      subGroup?: string;
+      dueDay?: number;
+      linkedCardId?: string;
+      months?: Record<number, Partial<MonthlyTriad>>;
+    }): Promise<ApiResponse> {
+      try {
+        if (!body.tenantId || !body.name || typeof body.name !== 'string' || body.name.trim() === '') {
+          return { status: 400, error: 'Campos tenantId e name são obrigatórios.' };
+        }
+        const created = store.createFinancialLine(body.tenantId, {
+          name: body.name.trim(),
+          profile: body.profile || 'PF',
+          group: body.group || 'RECURSOS_FINANCEIROS',
+          subGroup: body.subGroup,
+          dueDay: body.dueDay,
+          linkedCardId: body.linkedCardId,
+          months: body.months,
+        });
+        return { status: 201, data: created };
+      } catch (err: any) {
+        return { status: 500, error: err.message };
+      }
+    },
+
+    async handlePutFinanceLine(body: {
+      tenantId: string;
+      lineId: string;
+      name?: string;
+      profile?: ProfileType;
+      group?: FinancialGroup;
+      subGroup?: string;
+      dueDay?: number;
+      linkedCardId?: string;
+      months?: Record<number, Partial<MonthlyTriad>>;
+    }): Promise<ApiResponse> {
+      try {
+        if (!body.tenantId || !body.lineId) {
+          return { status: 400, error: 'Campos tenantId e lineId são obrigatórios.' };
+        }
+        const updated = store.updateFinancialLine(body.tenantId, body.lineId, {
+          name: body.name?.trim(),
+          profile: body.profile,
+          group: body.group,
+          subGroup: body.subGroup,
+          dueDay: body.dueDay,
+          linkedCardId: body.linkedCardId,
+          months: body.months,
+        });
+        return { status: 200, data: updated };
+      } catch (err: any) {
+        const isNotFound = err.message.includes('NotFoundError') || err.message.includes('violation');
+        return { status: isNotFound ? 404 : 500, error: err.message };
+      }
+    },
+
+    async handleDeleteFinanceLine(body: {
+      tenantId: string;
+      lineId: string;
+    }): Promise<ApiResponse> {
+      try {
+        if (!body.tenantId || !body.lineId) {
+          return { status: 400, error: 'Campos tenantId e lineId são obrigatórios.' };
+        }
+        store.deleteFinancialLine(body.tenantId, body.lineId);
+        return { status: 200, data: { success: true } };
+      } catch (err: any) {
+        const isNotFound = err.message.includes('NotFoundError') || err.message.includes('violation');
+        return { status: isNotFound ? 404 : 500, error: err.message };
       }
     },
 

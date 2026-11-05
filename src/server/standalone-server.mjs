@@ -422,6 +422,53 @@ function renderDashboardHtml(initialData) {
       cursor: pointer;
       border-radius: 8px;
     }
+    button.btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger-text, #ef4444);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: background 0.15s, transform 0.15s;
+    }
+    button.btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+      transform: translateY(-1px);
+    }
+    .liquid-lens-modal-wide {
+      max-width: 680px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .months-balance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.6rem;
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 0.6rem;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      margin-top: 0.35rem;
+    }
+    .month-balance-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      background: rgba(255, 255, 255, 0.3);
+      padding: 0.4rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+    }
+    .month-balance-item label {
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .month-balance-item input {
+      font-size: 0.8rem;
+      padding: 0.25rem 0.35rem;
+    }
 
     /* Liquid Lens Dock & Tab Navigation */
     nav.tab-nav,
@@ -881,13 +928,22 @@ function renderDashboardHtml(initialData) {
 
                 return `
                   <tr class="finance-group-header">
-                    <td colspan="9"><strong>${groupLabel}</strong> (${groupLines.length} itens)</td>
+                    <td colspan="9">
+                      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <span><strong>${groupLabel}</strong> (${groupLines.length} itens)</span>
+                        ${grp === 'RECURSOS_FINANCEIROS' ? `
+                          <button type="button" id="btn-new-resource" class="btn-primary" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+                            + Nova Conta / Recurso
+                          </button>
+                        ` : ''}
+                      </div>
+                    </td>
                   </tr>
                   ${groupLines.map((l) => {
                     const statusClass = l.referenceMonthStatus.includes('✔') ? 'status-ok' : l.referenceMonthStatus.includes('⚠') ? 'status-overdue' : l.referenceMonthStatus.includes('⏳') ? 'status-pending' : 'status-empty';
                     return `
-                      <tr data-line-id="${l.id}" data-profile="${l.profile}">
-                        <td>${l.name}</td>
+                      <tr data-line-id="${l.id}" data-profile="${l.profile}" data-group="${l.group}">
+                        <td><strong>${l.name}</strong></td>
                         <td><span class="badge ${l.profile === 'PF' ? 'badge-plan' : 'status-pending'}">${l.profile}</span></td>
                         <td><span class="badge-status ${statusClass}">${l.referenceMonthStatus}</span></td>
                         <td><span class="badge-status ${l.referenceMonthGoalStatus === 'bateu meta' ? 'status-ok' : l.referenceMonthGoalStatus === 'não bateu meta' ? 'status-overdue' : 'status-empty'}">${l.referenceMonthGoalStatus}</span></td>
@@ -895,8 +951,14 @@ function renderDashboardHtml(initialData) {
                         <td>R$ ${(l.months[referenceMonth]?.target || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                         <td><strong>R$ ${l.totalRealized.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></td>
                         <td>R$ ${l.monthlyAverage.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td>
-                          <button class="btn-secondary btn-edit-entry" data-line-id="${l.id}" data-line-name="${l.name}">Editar</button>
+                        <td style="white-space: nowrap;">
+                          <div style="display: flex; gap: 0.35rem; align-items: center;">
+                            <button class="btn-secondary btn-edit-entry" data-line-id="${l.id}" data-line-name="${l.name}" title="Editar Lançamento">Lançamento</button>
+                            ${l.group === 'RECURSOS_FINANCEIROS' ? `
+                              <button class="btn-secondary btn-edit-resource" data-line-id="${l.id}" data-line-name="${l.name}" data-line-profile="${l.profile}" data-line-months='${JSON.stringify(l.months)}' title="Editar Conta e Saldos">Editar</button>
+                              <button class="btn-danger btn-delete-resource" data-line-id="${l.id}" data-line-name="${l.name}" title="Excluir Conta">Excluir</button>
+                            ` : ''}
+                          </div>
                         </td>
                       </tr>
                     `;
@@ -1249,6 +1311,74 @@ function renderDashboardHtml(initialData) {
         </form>
       </div>
     </div>
+
+    <!-- Modal Nova Conta / Recurso Financeiro / Liquid Lens Modal -->
+    <div id="modal-new-resource" class="modal liquid-lens-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-new-resource-title">
+      <div class="modal-content liquid-lens-modal">
+        <h3 id="modal-new-resource-title" class="modal-title">Nova Conta / Recurso Financeiro</h3>
+        <form id="form-new-resource">
+          <div class="form-group">
+            <label for="input-resource-name">Nome da Conta / Recurso:</label>
+            <input type="text" id="input-resource-name" name="name" required placeholder="Ex: Investimento CDB DI, Caixa Poupança, etc.">
+          </div>
+          <div class="form-group">
+            <label for="select-resource-profile">Perfil:</label>
+            <select id="select-resource-profile" name="profile">
+              <option value="PF">Pessoa Física (PF)</option>
+              <option value="PJ">Pessoa Jurídica (PJ)</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-new-resource" class="btn-secondary">Cancelar</button>
+            <button type="submit" id="btn-submit-new-resource" class="btn-primary">Criar Recurso</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar Recurso Financeiro & Saldos / Liquid Lens Modal -->
+    <div id="modal-edit-resource" class="modal liquid-lens-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-edit-resource-title">
+      <div class="modal-content liquid-lens-modal liquid-lens-modal-wide">
+        <h3 id="modal-edit-resource-title" class="modal-title">Editar Recurso Financeiro & Saldos</h3>
+        <form id="form-edit-resource">
+          <input type="hidden" id="edit-resource-line-id" name="lineId">
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label for="edit-resource-name">Nome da Conta:</label>
+              <input type="text" id="edit-resource-name" name="name" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-resource-profile">Perfil:</label>
+              <select id="edit-resource-profile" name="profile">
+                <option value="PF">Pessoa Física (PF)</option>
+                <option value="PJ">Pessoa Jurídica (PJ)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.5rem;">
+            <label><strong>Saldos Mensais (Jan..Dez) — Regra do Último Saldo Informado:</strong></label>
+            <div class="months-balance-grid">
+              ${['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((mName, idx) => {
+                const mNum = idx + 1;
+                return `
+                  <div class="month-balance-item">
+                    <label>${mNum} - ${mName}</label>
+                    <input type="number" step="0.01" min="0" placeholder="Realizado R$" id="edit-resource-realized-${mNum}" data-month="${mNum}" class="input-resource-month-realized">
+                    <input type="number" step="0.01" min="0" placeholder="Meta R$" id="edit-resource-target-${mNum}" data-month="${mNum}" class="input-resource-month-target">
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-edit-resource" class="btn-secondary">Cancelar</button>
+            <button type="submit" id="btn-submit-edit-resource" class="btn-primary">Salvar Alterações</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- Script Cliente Interativo e Reativo -->
@@ -1396,6 +1526,140 @@ function renderDashboardHtml(initialData) {
       }
     });
 
+    // Modal New Resource
+    const btnNewResource = document.getElementById('btn-new-resource');
+    const modalNewResource = document.getElementById('modal-new-resource');
+    const btnCancelNewResource = document.getElementById('btn-cancel-new-resource');
+    const formNewResource = document.getElementById('form-new-resource');
+
+    if (btnNewResource && modalNewResource) {
+      btnNewResource.addEventListener('click', () => modalNewResource.classList.add('open'));
+      btnCancelNewResource?.addEventListener('click', () => modalNewResource.classList.remove('open'));
+
+      formNewResource?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tenantId = document.getElementById('tenant-select').value;
+        const name = document.getElementById('input-resource-name').value;
+        const profile = document.getElementById('select-resource-profile').value;
+
+        try {
+          const res = await fetch('/api/v1/finance/line', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenantId, name, profile, group: 'RECURSOS_FINANCEIROS' })
+          });
+          if (res.ok) {
+            modalNewResource.classList.remove('open');
+            formNewResource.reset();
+            window.location.reload();
+          } else {
+            const err = await res.json();
+            alert('Erro ao criar recurso: ' + (err.error || res.statusText));
+          }
+        } catch (err) {
+          alert('Erro ao criar recurso: ' + err.message);
+        }
+      });
+    }
+
+    // Modal Edit Resource & Balances
+    const modalEditResource = document.getElementById('modal-edit-resource');
+    const btnCancelEditResource = document.getElementById('btn-cancel-edit-resource');
+    const formEditResource = document.getElementById('form-edit-resource');
+
+    document.querySelectorAll('.btn-edit-resource').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lineId = btn.getAttribute('data-line-id');
+        const lineName = btn.getAttribute('data-line-name');
+        const lineProfile = btn.getAttribute('data-line-profile');
+        let months = {};
+        try {
+          months = JSON.parse(btn.getAttribute('data-line-months') || '{}');
+        } catch (e) {
+          months = {};
+        }
+
+        document.getElementById('edit-resource-line-id').value = lineId;
+        document.getElementById('edit-resource-name').value = lineName;
+        document.getElementById('edit-resource-profile').value = lineProfile;
+
+        for (let m = 1; m <= 12; m++) {
+          const entry = months[m] || { realized: 0, target: 0 };
+          const realizedInput = document.getElementById('edit-resource-realized-' + m);
+          const targetInput = document.getElementById('edit-resource-target-' + m);
+          if (realizedInput) realizedInput.value = entry.realized || '';
+          if (targetInput) targetInput.value = entry.target || '';
+        }
+
+        modalEditResource.classList.add('open');
+      });
+    });
+
+    btnCancelEditResource?.addEventListener('click', () => {
+      modalEditResource.classList.remove('open');
+    });
+
+    formEditResource?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const tenantId = document.getElementById('tenant-select').value;
+      const lineId = document.getElementById('edit-resource-line-id').value;
+      const name = document.getElementById('edit-resource-name').value;
+      const profile = document.getElementById('edit-resource-profile').value;
+
+      const months = {};
+      for (let m = 1; m <= 12; m++) {
+        const realizedVal = document.getElementById('edit-resource-realized-' + m)?.value;
+        const targetVal = document.getElementById('edit-resource-target-' + m)?.value;
+        months[m] = {
+          realized: realizedVal !== '' && realizedVal !== undefined ? Number(realizedVal) : 0,
+          target: targetVal !== '' && targetVal !== undefined ? Number(targetVal) : 0,
+        };
+      }
+
+      try {
+        const res = await fetch('/api/v1/finance/line', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenantId, lineId, name, profile, months })
+        });
+        if (res.ok) {
+          modalEditResource.classList.remove('open');
+          window.location.reload();
+        } else {
+          const err = await res.json();
+          alert('Erro ao atualizar recurso: ' + (err.error || res.statusText));
+        }
+      } catch (err) {
+        alert('Erro ao atualizar recurso: ' + err.message);
+      }
+    });
+
+    // Delete Resource Line
+    document.querySelectorAll('.btn-delete-resource').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const lineId = btn.getAttribute('data-line-id');
+        const lineName = btn.getAttribute('data-line-name');
+        const tenantId = document.getElementById('tenant-select').value;
+        if (confirm('Deseja realmente excluir a conta "' + lineName + '"?')) {
+          try {
+            const res = await fetch('/api/v1/finance/line', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tenantId, lineId })
+            });
+            if (res.ok) {
+              window.location.reload();
+            } else {
+              const err = await res.json();
+              alert('Erro ao excluir conta: ' + (err.error || res.statusText));
+            }
+          } catch (err) {
+            alert('Erro ao excluir conta: ' + err.message);
+          }
+        }
+      });
+    });
+
     // Tenant, Ano, Mês changes
     const tenantSelect = document.getElementById('tenant-select');
     const yearSelect = document.getElementById('year-select');
@@ -1488,6 +1752,36 @@ export async function startDashboardServer(port = 3000, existingStore = null) {
           res.writeHead(result.status);
           res.end(JSON.stringify(result));
           return;
+        }
+
+        if (pathname === '/api/v1/finance/line') {
+          if (method === 'POST') {
+            const body = await readBody();
+            const result = await routeHandlers.handlePostFinanceLine(body);
+            res.writeHead(result.status);
+            res.end(JSON.stringify(result));
+            return;
+          }
+          if (method === 'PUT' || method === 'PATCH') {
+            const body = await readBody();
+            const result = await routeHandlers.handlePutFinanceLine(body);
+            res.writeHead(result.status);
+            res.end(JSON.stringify(result));
+            return;
+          }
+          if (method === 'DELETE') {
+            let body = {};
+            try { body = await readBody(); } catch { body = {}; }
+            const query = Object.fromEntries(parsedUrl.searchParams.entries());
+            const payload = {
+              tenantId: body.tenantId || query.tenantId,
+              lineId: body.lineId || query.lineId,
+            };
+            const result = await routeHandlers.handleDeleteFinanceLine(payload);
+            res.writeHead(result.status);
+            res.end(JSON.stringify(result));
+            return;
+          }
         }
 
         if (pathname === '/api/v1/cards/purchase' && method === 'POST') {

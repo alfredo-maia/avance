@@ -8,15 +8,47 @@ import {
   LiquidLensBadge,
 } from '../components/liquid-lens/index.ts';
 
+interface ResourceAccount {
+  id: string;
+  name: string;
+  profile: 'PF' | 'PJ';
+  months: Record<number, { realized: number; target: number }>;
+}
+
 /**
- * Página principal do SaaS Multi-Tenant no Next.js App Router (ADR-0002 / AV-98)
- * Renderiza interface dos 4 módulos com componentes Liquid Lens / Liquid Glass UI.
+ * Página principal do SaaS Multi-Tenant no Next.js App Router (ADR-0002 / AV-98 / AV-100)
+ * Renderiza interface dos 4 módulos com componentes Liquid Lens / Liquid Glass UI
+ * e gestão completa de recursos financeiros.
  */
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<string>('tab-finance');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState<boolean>(false);
+  const [isEditResourceModalOpen, setIsEditResourceModalOpen] = useState<boolean>(false);
   const [tenantName, setTenantName] = useState<string>('Avance Matriz');
   const [tenantPlan, setTenantPlan] = useState<string>('PRO');
+  const [editingResource, setEditingResource] = useState<ResourceAccount | null>(null);
+
+  const [resources, setResources] = useState<ResourceAccount[]>([
+    {
+      id: 'res-1',
+      name: 'Banco do Brasil Corrente',
+      profile: 'PF',
+      months: { 1: { realized: 25000, target: 20000 }, 2: { realized: 27500, target: 25000 } },
+    },
+    {
+      id: 'res-2',
+      name: 'Nubank PF CDB/Caixinha',
+      profile: 'PF',
+      months: { 1: { realized: 80000, target: 75000 } },
+    },
+    {
+      id: 'res-3',
+      name: 'Nubank PJ Corrente',
+      profile: 'PJ',
+      months: { 1: { realized: 15000, target: 12000 } },
+    },
+  ]);
 
   const dockTabs = [
     { id: 'tab-finance', label: '1. Controle Finanças', targetPanelId: 'panel-finance' },
@@ -36,6 +68,75 @@ export default function DashboardPage() {
       setIsModalOpen(false);
     }
   };
+
+  const handleAddResource = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get('name') as string;
+    const profile = (formData.get('profile') as 'PF' | 'PJ') || 'PF';
+
+    if (name) {
+      const newRes: ResourceAccount = {
+        id: `res-${Date.now()}`,
+        name,
+        profile,
+        months: {},
+      };
+      setResources((prev) => [...prev, newRes]);
+      setIsResourceModalOpen(false);
+    }
+  };
+
+  const handleOpenEditResource = (res: ResourceAccount) => {
+    setEditingResource(res);
+    setIsEditResourceModalOpen(true);
+  };
+
+  const handleSaveEditResource = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingResource) return;
+
+    const formData = new FormData(e.currentTarget);
+    const name = (formData.get('name') as string) || editingResource.name;
+    const profile = (formData.get('profile') as 'PF' | 'PJ') || editingResource.profile;
+
+    const updatedMonths: Record<number, { realized: number; target: number }> = {};
+    for (let m = 1; m <= 12; m++) {
+      const realizedVal = formData.get(`realized-${m}`);
+      const targetVal = formData.get(`target-${m}`);
+      updatedMonths[m] = {
+        realized: realizedVal ? Number(realizedVal) : 0,
+        target: targetVal ? Number(targetVal) : 0,
+      };
+    }
+
+    setResources((prev) =>
+      prev.map((r) =>
+        r.id === editingResource.id
+          ? { ...r, name, profile, months: updatedMonths }
+          : r
+      )
+    );
+    setIsEditResourceModalOpen(false);
+    setEditingResource(null);
+  };
+
+  const handleDeleteResource = (id: string, name: string) => {
+    if (confirm(`Deseja realmente excluir a conta "${name}"?`)) {
+      setResources((prev) => prev.filter((r) => r.id !== id));
+    }
+  };
+
+  // Calcula último saldo informado para cada recurso
+  const getLastBalance = (res: ResourceAccount): number => {
+    for (let m = 12; m >= 1; m--) {
+      const val = res.months[m]?.realized ?? 0;
+      if (val > 0) return val;
+    }
+    return 0;
+  };
+
+  const totalPatrimony = resources.reduce((acc, r) => acc + getLastBalance(r), 0);
 
   return (
     <main className="app-wrapper">
@@ -91,7 +192,75 @@ export default function DashboardPage() {
             <LiquidLensCard id="kpi-overdue-amount" title="Valor em Atraso" value="R$ 450,00" variant="danger" />
             <LiquidLensCard id="kpi-month-result" title="Resultado Final do Mês" value="R$ 10.800,00" variant="success" />
             <LiquidLensCard id="kpi-accumulated-result" title="Resultado Acumulado Ano" value="R$ 10.800,00" variant="success" />
-            <LiquidLensCard id="kpi-patrimony-balance" title="Patrimônio (Último Saldo)" value="R$ 107.500,00" />
+            <LiquidLensCard
+              id="kpi-patrimony-balance"
+              title="Patrimônio (Último Saldo)"
+              value={`R$ ${totalPatrimony.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+            />
+          </div>
+
+          {/* Gestão de Recursos Financeiros (AV-100) */}
+          <div className="section-card liquid-lens" style={{ marginBottom: '1.25rem' }}>
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 className="section-title">Recursos Financeiros & Saldos (Último Saldo Informado)</h2>
+              <button
+                type="button"
+                id="btn-new-resource"
+                className="btn-primary"
+                onClick={() => setIsResourceModalOpen(true)}
+              >
+                + Nova Conta / Recurso
+              </button>
+            </div>
+
+            <div className="table-responsive">
+              <table className="data-table" aria-label="Recursos Financeiros">
+                <thead>
+                  <tr>
+                    <th scope="col">Conta / Recurso</th>
+                    <th scope="col">Perfil</th>
+                    <th scope="col">Último Saldo Informado</th>
+                    <th scope="col">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resources.map((r) => {
+                    const balance = getLastBalance(r);
+                    return (
+                      <tr key={r.id}>
+                        <td><strong>{r.name}</strong></td>
+                        <td>
+                          <span className={`badge ${r.profile === 'PF' ? 'badge-plan' : 'status-pending'}`}>
+                            {r.profile}
+                          </span>
+                        </td>
+                        <td>
+                          <strong>R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              onClick={() => handleOpenEditResource(r)}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-danger"
+                              onClick={() => handleDeleteResource(r.id, r.name)}
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="section-card liquid-lens">
@@ -145,7 +314,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Modal Liquid Lens */}
+      {/* Modal Novo Tenant */}
       <LiquidLensModal
         id="modal-new-tenant"
         isOpen={isModalOpen}
@@ -179,6 +348,123 @@ export default function DashboardPage() {
           </div>
         </form>
       </LiquidLensModal>
+
+      {/* Modal Nova Conta / Recurso Financeiro */}
+      <LiquidLensModal
+        id="modal-new-resource"
+        isOpen={isResourceModalOpen}
+        onClose={() => setIsResourceModalOpen(false)}
+        title="Nova Conta / Recurso Financeiro"
+      >
+        <form onSubmit={handleAddResource}>
+          <div className="form-group">
+            <label htmlFor="input-new-resource-name">Nome da Conta / Recurso:</label>
+            <input
+              type="text"
+              id="input-new-resource-name"
+              name="name"
+              required
+              placeholder="Ex: CDB Liquidez Diária, Banco Inter, etc."
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="select-new-resource-profile">Perfil:</label>
+            <select id="select-new-resource-profile" name="profile">
+              <option value="PF">Pessoa Física (PF)</option>
+              <option value="PJ">Pessoa Jurídica (PJ)</option>
+            </select>
+          </div>
+          <div className="form-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setIsResourceModalOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary">
+              Criar Recurso
+            </button>
+          </div>
+        </form>
+      </LiquidLensModal>
+
+      {/* Modal Editar Recurso & Saldos */}
+      {editingResource && (
+        <LiquidLensModal
+          id="modal-edit-resource"
+          isOpen={isEditResourceModalOpen}
+          onClose={() => {
+            setIsEditResourceModalOpen(false);
+            setEditingResource(null);
+          }}
+          title="Editar Recurso Financeiro & Saldos"
+        >
+          <form onSubmit={handleSaveEditResource}>
+            <div className="form-group">
+              <label htmlFor="edit-modal-name">Nome da Conta:</label>
+              <input
+                type="text"
+                id="edit-modal-name"
+                name="name"
+                defaultValue={editingResource.name}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-modal-profile">Perfil:</label>
+              <select
+                id="edit-modal-profile"
+                name="profile"
+                defaultValue={editingResource.profile}
+              >
+                <option value="PF">Pessoa Física (PF)</option>
+                <option value="PJ">Pessoa Jurídica (PJ)</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginTop: '0.75rem' }}>
+              <label><strong>Saldos Mensais (Jan..Dez):</strong></label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.4rem', maxHeight: '200px', overflowY: 'auto' }}>
+                {['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((mName, idx) => {
+                  const m = idx + 1;
+                  const cur = editingResource.months[m] || { realized: 0, target: 0 };
+                  return (
+                    <div key={m} style={{ padding: '0.35rem', background: 'rgba(255,255,255,0.2)', borderRadius: '6px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{m} - {mName}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        name={`realized-${m}`}
+                        defaultValue={cur.realized || ''}
+                        placeholder="Realizado R$"
+                        style={{ width: '100%', fontSize: '0.75rem', marginTop: '0.2rem' }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setIsEditResourceModalOpen(false);
+                  setEditingResource(null);
+                }}
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="btn-primary">
+                Salvar Alterações
+              </button>
+            </div>
+          </form>
+        </LiquidLensModal>
+      )}
     </main>
   );
 }

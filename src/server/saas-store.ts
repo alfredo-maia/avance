@@ -25,6 +25,9 @@ import type {
   Tenant,
   SaaSPlan,
   FinancialCategoryLine,
+  FinancialGroup,
+  ProfileType,
+  MonthlyTriad,
   ComputedFinancialLine,
   CreditCard,
   InstallmentPurchase,
@@ -120,6 +123,114 @@ export class SaaSStore {
     this.ensureTenant(tenantId);
     const map = this.financialLines.get(tenantId) || new Map();
     return Array.from(map.values());
+  }
+
+  createFinancialLine(
+    tenantId: string,
+    data: {
+      name: string;
+      profile?: ProfileType;
+      group?: FinancialGroup;
+      subGroup?: string;
+      dueDay?: number;
+      linkedCardId?: string;
+      months?: Record<number, Partial<MonthlyTriad>>;
+    }
+  ): FinancialCategoryLine {
+    this.ensureTenant(tenantId);
+    const lineMap = this.financialLines.get(tenantId);
+    if (!lineMap) {
+      throw new Error(`NotFoundError: Line store for tenant '${tenantId}' not initialized.`);
+    }
+
+    const id = `${tenantId}-line-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const months: Record<number, MonthlyTriad> = {};
+    for (let m = 1; m <= 12; m++) {
+      const entry = data.months?.[m];
+      months[m] = {
+        month: m,
+        realized: entry?.realized !== undefined ? entry.realized : 0,
+        target: entry?.target !== undefined ? entry.target : 0,
+        settledAt: entry?.settledAt !== undefined ? entry.settledAt : null,
+      };
+    }
+
+    const line: FinancialCategoryLine = {
+      id,
+      tenantId,
+      name: data.name,
+      profile: data.profile || 'PF',
+      group: data.group || 'RECURSOS_FINANCEIROS',
+      subGroup: data.subGroup,
+      dueDay: data.dueDay,
+      linkedCardId: data.linkedCardId,
+      months,
+    };
+
+    lineMap.set(id, line);
+    return line;
+  }
+
+  updateFinancialLine(
+    tenantId: string,
+    lineId: string,
+    data: {
+      name?: string;
+      profile?: ProfileType;
+      group?: FinancialGroup;
+      subGroup?: string;
+      dueDay?: number;
+      linkedCardId?: string;
+      months?: Record<number, Partial<MonthlyTriad>>;
+    }
+  ): FinancialCategoryLine {
+    this.ensureTenant(tenantId);
+    const lineMap = this.financialLines.get(tenantId);
+    const line = lineMap?.get(lineId);
+
+    if (!line) {
+      throw new Error(`NotFoundError: Line '${lineId}' not found for tenant '${tenantId}'.`);
+    }
+
+    if (data.name !== undefined) line.name = data.name;
+    if (data.profile !== undefined) line.profile = data.profile;
+    if (data.group !== undefined) line.group = data.group;
+    if (data.subGroup !== undefined) line.subGroup = data.subGroup;
+    if (data.dueDay !== undefined) line.dueDay = data.dueDay;
+    if (data.linkedCardId !== undefined) line.linkedCardId = data.linkedCardId;
+
+    if (data.months) {
+      for (const [mStr, entry] of Object.entries(data.months)) {
+        const m = Number(mStr);
+        if (m >= 1 && m <= 12 && entry) {
+          const current = line.months[m] ?? {
+            month: m,
+            realized: 0,
+            target: 0,
+            settledAt: null,
+          };
+          line.months[m] = {
+            month: m,
+            realized: entry.realized !== undefined ? entry.realized : current.realized,
+            target: entry.target !== undefined ? entry.target : current.target,
+            settledAt: entry.settledAt !== undefined ? entry.settledAt : current.settledAt,
+          };
+        }
+      }
+    }
+
+    return line;
+  }
+
+  deleteFinancialLine(tenantId: string, lineId: string): boolean {
+    this.ensureTenant(tenantId);
+    const lineMap = this.financialLines.get(tenantId);
+    if (!lineMap || !lineMap.has(lineId)) {
+      throw new Error(`NotFoundError: Line '${lineId}' not found for tenant '${tenantId}'.`);
+    }
+
+    lineMap.delete(lineId);
+    return true;
   }
 
   updateFinancialEntry(
