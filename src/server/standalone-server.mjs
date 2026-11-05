@@ -533,13 +533,16 @@ function renderDashboardHtml(initialData) {
     /* Sections */
     .section-card {
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
+      -webkit-backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
+      border: var(--lens-rim);
+      border-radius: 12px;
       padding: 1.25rem;
       margin-bottom: 1.5rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      box-shadow: var(--lens-shadow), var(--lens-specular);
       width: 100%;
       box-sizing: border-box;
+      position: relative;
     }
     .section-header {
       display: flex;
@@ -601,9 +604,12 @@ function renderDashboardHtml(initialData) {
     }
     .credit-card-item {
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
+      -webkit-backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
+      border: var(--lens-rim);
+      border-radius: 12px;
       padding: 1rem;
+      box-shadow: var(--lens-shadow), var(--lens-specular);
     }
     .card-header-line {
       display: flex;
@@ -698,13 +704,14 @@ function renderDashboardHtml(initialData) {
     }
   </style>
 </head>
-<body>
+<body class="liquid-lens-theme">
   <div class="app-wrapper">
     <!-- Header / Administração SaaS Multi-Tenant -->
     <header class="saas-header" role="banner">
       <div class="header-brand">
         <h1 class="brand-title">Avance SaaS</h1>
         <span id="plan-badge" class="badge badge-plan">${tenant.plan}</span>
+        <span id="ds-badge" class="badge" style="background: rgba(37, 99, 235, 0.12); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.35); font-size: 0.75rem; font-weight: 600;">Liquid Lens DS</span>
         <button id="btn-new-tenant" class="btn-primary" aria-haspopup="dialog" aria-controls="modal-new-tenant">+ Novo Tenant</button>
       </div>
 
@@ -1543,7 +1550,12 @@ export async function startDashboardServer(port = 3000, existingStore = null) {
           tenants,
         });
 
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        });
         res.end(html);
         return;
       }
