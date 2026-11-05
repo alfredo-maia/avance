@@ -7,6 +7,7 @@ import http from 'node:http';
 import { URL } from 'node:url';
 import { SaaSStore } from './saas-store.ts';
 import { createApiRouteHandlers } from '../app/api/v1/route-handlers.ts';
+import { LIQUID_LENS_CLASSES, LIQUID_LENS_TOKENS } from '../components/liquid-lens/tokens.ts';
 
 /**
  * Popula o tenant demonstrativo com dados ilustrativos cobrindo os 4 módulos,
@@ -278,12 +279,12 @@ function renderDashboardHtml(initialData) {
     }
     :root {
       --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface-subtle: #f1f5f9;
+      --surface: rgba(255, 255, 255, 0.78);
+      --surface-subtle: rgba(241, 245, 249, 0.7);
       --text: #0f172a;
       --text-muted: #475569;
       --text-light: #64748b;
-      --border: #cbd5e1;
+      --border: rgba(203, 213, 225, 0.7);
       --primary: #2563eb;
       --primary-hover: #1d4ed8;
       --success-bg: #dcfce7;
@@ -294,10 +295,29 @@ function renderDashboardHtml(initialData) {
       --danger-text: #991b1b;
       --focus-ring: #2563eb;
       --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+      /* Liquid Lens Refraction Tokens */
+      --lens-blur: 16px;
+      --lens-saturate: 180%;
+      --lens-contrast: 102%;
+      --lens-rim: 1px solid rgba(255, 255, 255, 0.65);
+      --lens-specular: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.85);
+      --lens-shadow: 0 12px 32px -10px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+      --dock-blur: 20px;
+      --dock-bg: rgba(255, 255, 255, 0.84);
+      --dock-border: 1px solid rgba(255, 255, 255, 0.7);
+      --dock-active-bg: rgba(37, 99, 235, 0.12);
+      --dock-active-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.22), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
+      --modal-backdrop-blur: 14px;
+      --modal-backdrop-bg: rgba(15, 23, 42, 0.5);
+      --modal-dialog-bg: rgba(255, 255, 255, 0.95);
+      --modal-dialog-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35), inset 0 1px 2px 0 rgba(255, 255, 255, 0.85);
     }
     body {
       font-family: var(--font);
-      background-color: var(--bg);
+      background: radial-gradient(circle at 10% 20%, rgba(219, 234, 254, 0.55) 0%, rgba(248, 250, 252, 1) 45%),
+                  radial-gradient(circle at 90% 80%, rgba(224, 231, 255, 0.45) 0%, rgba(248, 250, 252, 0.85) 50%);
+      background-attachment: fixed;
       color: var(--text);
       line-height: 1.5;
       min-height: 100vh;
@@ -313,8 +333,10 @@ function renderDashboardHtml(initialData) {
     }
     header.saas-header {
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
+      -webkit-backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
+      border: var(--lens-rim);
+      border-radius: 12px;
       padding: 1rem 1.25rem;
       margin-bottom: 1.25rem;
       display: flex;
@@ -322,7 +344,7 @@ function renderDashboardHtml(initialData) {
       justify-content: space-between;
       align-items: center;
       gap: 1rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: var(--lens-shadow), var(--lens-specular);
     }
     .header-brand {
       display: flex;
@@ -344,9 +366,12 @@ function renderDashboardHtml(initialData) {
       border-radius: 9999px;
     }
     .badge-plan {
-      background: #e0e7ff;
+      background: rgba(224, 231, 255, 0.8);
       color: #3730a3;
-      border: 1px solid #c7d2fe;
+      border: 1px solid rgba(199, 210, 254, 0.9);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.75);
     }
     .header-controls {
       display: flex;
@@ -368,9 +393,9 @@ function renderDashboardHtml(initialData) {
       font-family: inherit;
       font-size: 0.875rem;
       padding: 0.4rem 0.65rem;
-      border-radius: 6px;
+      border-radius: 8px;
       border: 1px solid var(--border);
-      background: var(--surface);
+      background: rgba(255, 255, 255, 0.85);
       color: var(--text);
     }
     select:focus, input:focus, button:focus {
@@ -383,46 +408,63 @@ function renderDashboardHtml(initialData) {
       border: none;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+      transition: background 0.15s, transform 0.15s;
     }
     button.btn-primary:hover {
       background: var(--primary-hover);
+      transform: translateY(-1px);
     }
     button.btn-secondary {
       background: var(--surface-subtle);
       color: var(--text);
       cursor: pointer;
+      border-radius: 8px;
     }
-    /* Tab Navigation */
-    nav.tab-nav {
-      display: flex;
-      gap: 0.5rem;
+
+    /* Liquid Lens Dock & Tab Navigation */
+    nav.tab-nav,
+    .liquid-lens-dock {
+      display: inline-flex;
+      gap: 0.4rem;
       margin-bottom: 1.25rem;
-      border-bottom: 2px solid var(--border);
-      padding-bottom: 0.5rem;
+      padding: 0.35rem 0.5rem;
+      background: var(--dock-bg);
+      backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+      -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+      border: var(--dock-border);
+      border-radius: 9999px;
+      box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.12),
+                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.85);
       overflow-x: auto;
+      max-width: 100%;
       -webkit-overflow-scrolling: touch;
     }
-    .tab-btn {
-      padding: 0.6rem 1rem;
+    .tab-btn,
+    .liquid-lens-dock-tab {
+      padding: 0.55rem 1.15rem;
       background: transparent;
       border: 1px solid transparent;
-      border-radius: 6px;
+      border-radius: 9999px;
       font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
       white-space: nowrap;
-      transition: all 0.15s;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
     }
-    .tab-btn:hover {
-      background: var(--surface-subtle);
+    .tab-btn:hover,
+    .liquid-lens-dock-tab:hover {
+      background: rgba(255, 255, 255, 0.65);
       color: var(--text);
     }
-    .tab-btn[aria-selected="true"] {
-      background: var(--surface);
+    .tab-btn[aria-selected="true"],
+    .liquid-lens-dock-tab-active {
+      background: var(--dock-active-bg);
       color: var(--primary);
-      border-color: var(--border);
-      border-bottom: 3px solid var(--primary);
+      border-color: rgba(37, 99, 235, 0.35);
+      box-shadow: var(--dock-active-shadow);
     }
     /* Tab Panels */
     .tab-panel {
@@ -431,19 +473,47 @@ function renderDashboardHtml(initialData) {
     .tab-panel[aria-hidden="false"] {
       display: block;
     }
-    /* KPI Cards Grid */
+    /* Liquid Lens KPI Cards */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
-    .kpi-card {
+    .kpi-card,
+    .liquid-lens-card {
+      position: relative;
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
+      -webkit-backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
+      border: var(--lens-rim);
+      border-radius: 12px;
+      padding: 1.1rem;
+      box-shadow: var(--lens-shadow), var(--lens-specular);
+      overflow: hidden;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                  box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                  border-color 0.2s ease;
+    }
+    .kpi-card:hover,
+    .liquid-lens-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.16),
+                  0 6px 16px -2px rgba(15, 23, 42, 0.08),
+                  inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
+      border-color: rgba(255, 255, 255, 0.85);
+    }
+    .kpi-card::before,
+    .liquid-lens-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 38%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
+      pointer-events: none;
+      border-radius: inherit;
     }
     .kpi-label {
       font-size: 0.8rem;
@@ -558,27 +628,49 @@ function renderDashboardHtml(initialData) {
       height: auto;
       max-height: 320px;
     }
-    /* Modals */
-    .modal {
+    /* Modals & Liquid Lens Backdrop */
+    .modal,
+    .liquid-lens-modal-backdrop {
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.6);
+      background: var(--modal-backdrop-bg);
+      backdrop-filter: blur(var(--modal-backdrop-blur));
+      -webkit-backdrop-filter: blur(var(--modal-backdrop-blur));
       align-items: center;
       justify-content: center;
       z-index: 1000;
       padding: 1rem;
+      transition: opacity 0.25s ease;
     }
-    .modal.open {
+    .modal.open,
+    .liquid-lens-modal-backdrop.open {
       display: flex;
     }
-    .modal-content {
-      background: var(--surface);
-      border-radius: 8px;
-      padding: 1.5rem;
+    .modal-content,
+    .liquid-lens-modal {
+      position: relative;
+      background: var(--modal-dialog-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      border-radius: 16px;
+      padding: 1.75rem;
       width: 100%;
       max-width: 480px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      box-shadow: var(--modal-dialog-shadow);
+      overflow: hidden;
+    }
+    .modal-content::before,
+    .liquid-lens-modal::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 100%);
+      pointer-events: none;
     }
     .modal-title {
       font-size: 1.15rem;
@@ -653,71 +745,71 @@ function renderDashboardHtml(initialData) {
       </div>
     </header>
 
-    <!-- Navegação por Abas (4 Módulos) -->
-    <nav class="tab-nav" role="tablist" aria-label="Navegação dos 4 Módulos">
-      <button id="tab-btn-finance" class="tab-btn" role="tab" aria-selected="true" aria-controls="tab-finance">1. Controle Finanças</button>
-      <button id="tab-btn-cards" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-cards">2. Cartões de Crédito</button>
-      <button id="tab-btn-goals" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-goals">3. Propósitos e Metas</button>
-      <button id="tab-btn-action-plan" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-action-plan">4. Plano de Ação</button>
+    <!-- Navegação por Abas (4 Módulos) / Liquid Lens Dock -->
+    <nav class="tab-nav liquid-lens-dock" role="tablist" aria-label="Navegação dos 4 Módulos">
+      <button id="tab-btn-finance" class="tab-btn liquid-lens-dock-tab liquid-lens-dock-tab-active" role="tab" aria-selected="true" aria-controls="tab-finance">1. Controle Finanças</button>
+      <button id="tab-btn-cards" class="tab-btn liquid-lens-dock-tab" role="tab" aria-selected="false" aria-controls="tab-cards">2. Cartões de Crédito</button>
+      <button id="tab-btn-goals" class="tab-btn liquid-lens-dock-tab" role="tab" aria-selected="false" aria-controls="tab-goals">3. Propósitos e Metas</button>
+      <button id="tab-btn-action-plan" class="tab-btn liquid-lens-dock-tab" role="tab" aria-selected="false" aria-controls="tab-action-plan">4. Plano de Ação</button>
     </nav>
 
     <!-- ABA 1: CONTROLE FINANÇAS -->
     <section id="tab-finance" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-finance" aria-hidden="false">
-      <!-- 9 Cards de KPIs -->
+      <!-- 9 Cards de KPIs Liquid Lens -->
       <div class="kpi-grid">
-        <div class="kpi-card">
+        <div id="kpi-received" class="kpi-card liquid-lens-card">
           <div class="kpi-label">Recebido no Mês</div>
-          <div id="kpi-received" class="kpi-value positive">R$ ${kpis.receivedInMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div class="kpi-value positive">R$ ${kpis.receivedInMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </div>
-        <div class="kpi-card">
+        <div id="kpi-to-receive" class="kpi-card liquid-lens-card">
           <div class="kpi-label">A Receber no Mês</div>
-          <div id="kpi-to-receive" class="kpi-value">R$ ${kpis.toReceiveInMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div class="kpi-value">R$ ${kpis.toReceiveInMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </div>
-        <div class="kpi-card">
+        <div id="kpi-paid" class="kpi-card liquid-lens-card">
           <div class="kpi-label">Pago no Mês</div>
-          <div id="kpi-paid" class="kpi-value">R$ ${kpis.paidInMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div class="kpi-value">R$ ${kpis.paidInMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </div>
-        <div class="kpi-card">
+        <div id="kpi-to-pay" class="kpi-card liquid-lens-card">
           <div class="kpi-label">A Pagar no Mês</div>
-          <div id="kpi-to-pay" class="kpi-value">R$ ${kpis.toPayInMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div class="kpi-value">R$ ${kpis.toPayInMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </div>
-        <div class="kpi-card">
+        <div id="kpi-overdue-count" class="kpi-card liquid-lens-card">
           <div class="kpi-label">Contas Atrasadas</div>
-          <div id="kpi-overdue-count" class="kpi-value ${kpis.overdueCount > 0 ? 'negative' : ''}">${kpis.overdueCount} contas</div>
+          <div class="kpi-value ${kpis.overdueCount > 0 ? 'negative' : ''}">${kpis.overdueCount} contas</div>
         </div>
-        <div class="kpi-card">
+        <div id="kpi-overdue-amount" class="kpi-card liquid-lens-card">
           <div class="kpi-label">Valor em Atraso</div>
-          <div id="kpi-overdue-amount" class="kpi-value ${kpis.overdueAmount > 0 ? 'negative' : ''}">R$ ${kpis.overdueAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div class="kpi-value ${kpis.overdueAmount > 0 ? 'negative' : ''}">R$ ${kpis.overdueAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </div>
-        <div class="kpi-card">
+        <div id="kpi-month-result" class="kpi-card liquid-lens-card">
           <div class="kpi-label">Resultado Final do Mês</div>
-          <div id="kpi-month-result" class="kpi-value ${kpis.monthFinalResult >= 0 ? 'positive' : 'negative'}">R$ ${kpis.monthFinalResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div class="kpi-value ${kpis.monthFinalResult >= 0 ? 'positive' : 'negative'}">R$ ${kpis.monthFinalResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </div>
-        <div class="kpi-card">
+        <div id="kpi-accumulated-result" class="kpi-card liquid-lens-card">
           <div class="kpi-label">Resultado Acumulado Ano</div>
-          <div id="kpi-accumulated-result" class="kpi-value ${kpis.accumulatedResultYear >= 0 ? 'positive' : 'negative'}">R$ ${kpis.accumulatedResultYear.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div class="kpi-value ${kpis.accumulatedResultYear >= 0 ? 'positive' : 'negative'}">R$ ${kpis.accumulatedResultYear.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </div>
-        <div class="kpi-card">
+        <div id="kpi-patrimony-balance" class="kpi-card liquid-lens-card">
           <div class="kpi-label">Patrimônio (Último Saldo)</div>
-          <div id="kpi-patrimony-balance" class="kpi-value">R$ ${patrimonyBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div class="kpi-value">R$ ${patrimonyBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </div>
       </div>
 
       <!-- Resumo de Indicadores e Gráficos -->
-      <div class="section-card">
+      <div class="section-card liquid-lens">
         <div class="section-header">
           <h2 class="section-title">Evolução Mensal e Indicadores Resumo</h2>
         </div>
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
-          <div class="kpi-card" style="flex: 1; min-width: 200px;">
+          <div class="kpi-card liquid-lens-card" style="flex: 1; min-width: 200px;">
             <div class="kpi-label">Taxa de Investimento</div>
             <div id="indicator-investment-rate" class="kpi-value">${investmentPct}%</div>
           </div>
-          <div class="kpi-card" style="flex: 1; min-width: 200px;">
+          <div class="kpi-card liquid-lens-card" style="flex: 1; min-width: 200px;">
             <div class="kpi-label">Cartões ÷ Rendimento</div>
             <div id="indicator-cards-ratio" class="kpi-value">${cardsPct}%</div>
           </div>
-          <div class="kpi-card" style="flex: 1; min-width: 200px;">
+          <div class="kpi-card liquid-lens-card" style="flex: 1; min-width: 200px;">
             <div class="kpi-label">% Contas Pagas</div>
             <div id="indicator-paid-percentage" class="kpi-value">${paidBillsPct}%</div>
           </div>
@@ -1089,9 +1181,9 @@ function renderDashboardHtml(initialData) {
       </div>
     </section>
 
-    <!-- Modal Novo Tenant -->
-    <div id="modal-new-tenant" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-tenant-title">
-      <div class="modal-content">
+    <!-- Modal Novo Tenant / Liquid Lens Modal -->
+    <div id="modal-new-tenant" class="modal liquid-lens-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-tenant-title">
+      <div class="modal-content liquid-lens-modal">
         <h3 id="modal-tenant-title" class="modal-title">Cadastrar Novo Tenant</h3>
         <form id="form-new-tenant">
           <div class="form-group">
@@ -1114,9 +1206,9 @@ function renderDashboardHtml(initialData) {
       </div>
     </div>
 
-    <!-- Modal Editar Lançamento Financeiro -->
-    <div id="modal-edit-finance" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-finance-title">
-      <div class="modal-content">
+    <!-- Modal Editar Lançamento Financeiro / Liquid Lens Modal -->
+    <div id="modal-edit-finance" class="modal liquid-lens-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-finance-title">
+      <div class="modal-content liquid-lens-modal">
         <h3 id="modal-finance-title" class="modal-title">Editar Lançamento Mensal</h3>
         <form id="form-edit-finance-entry">
           <input type="hidden" id="edit-line-id" name="lineId">
@@ -1161,12 +1253,14 @@ function renderDashboardHtml(initialData) {
     function activateTab(btn) {
       tabButtons.forEach(b => {
         b.setAttribute('aria-selected', 'false');
+        b.classList.remove('liquid-lens-dock-tab-active');
       });
       tabPanels.forEach(p => {
         p.setAttribute('aria-hidden', 'true');
       });
 
       btn.setAttribute('aria-selected', 'true');
+      btn.classList.add('liquid-lens-dock-tab-active');
       const targetId = btn.getAttribute('aria-controls');
       const panel = document.getElementById(targetId);
       if (panel) {

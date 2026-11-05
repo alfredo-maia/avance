@@ -1,5 +1,7 @@
 .scratch/
 node_modules/
+.next/
+next-env.d.ts
 __pycache__/
 *.log
 *.tsbuildinfo
