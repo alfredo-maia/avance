@@ -1,12 +1,14 @@
 import test, { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { startDashboardServer } from '../../src/server/standalone-server.mjs';
 
 let serverInstance: any;
 let baseUrl: string;
 let browser: any;
 
-const PLAYWRIGHT_PATH = process.env.PLAYWRIGHT_PATH || '/home/hermes/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs';
+const HERMES_PLAYWRIGHT = '/home/hermes/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs';
+const PLAYWRIGHT_PATH = process.env.PLAYWRIGHT_PATH || (fs.existsSync(HERMES_PLAYWRIGHT) ? HERMES_PLAYWRIGHT : 'playwright');
 
 describe('SaaS Multi-Tenant Dashboard UI & Frontend TDD (AC-16)', () => {
   before(async () => {

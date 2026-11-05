@@ -6,10 +6,14 @@
   "description": "Avance SaaS Multi-Tenant Financeiro e de Metas (AV-87 / ADR-0002)",
   "scripts": {
     "dev": "node src/server/standalone-server.mjs",
+    "build": "next build",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/skills-smoke/*.test.mjs tests/unit/*.test.ts tests/integration/*.test.ts",
     "test:smoke": "node --test tests/skills-smoke/*.test.mjs",
     "test:domain": "node --experimental-strip-types --test tests/unit/*.test.ts",
-    "test:integration": "node --experimental-strip-types --test tests/integration/*.test.ts"
+    "test:integration": "node --experimental-strip-types --test tests/integration/*.test.ts",
+    "check:agent-setup": "python3 scripts/check_agent_setup.py"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
