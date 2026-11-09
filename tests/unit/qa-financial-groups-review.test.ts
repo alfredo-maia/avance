@@ -2,11 +2,7 @@ import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { SaaSStore } from '../../src/server/saas-store.ts';
 import { createApiRouteHandlers } from '../../src/app/api/v1/route-handlers.ts';
-import {
-  LIQUID_LENS_CLASSES,
-  LIQUID_LENS_TOKENS,
-  validateLiquidLensContrast,
-} from '../../src/components/liquid-lens/tokens.ts';
+import { theme, validateMuiContrast } from '../../src/theme/theme.ts';
 
 describe('QA Independente — Gestão dos Demais Grupos Financeiros (Ms. Sakura)', () => {
   test('QA-1: Integridade da criação dinâmica nos 4 grupos adicionais com metadados obrigatórios', async () => {
@@ -134,13 +130,12 @@ describe('QA Independente — Gestão dos Demais Grupos Financeiros (Ms. Sakura)
     assert.ok(dashB.finance.lines.some((l) => l.id === lineB.id), 'Linha de Tenant B não pode ser afetada');
   });
 
-  test('QA-5: Conformidade visual e contraste Liquid Lens nos botões de ação e tabelas', () => {
-    assert.ok(LIQUID_LENS_CLASSES.card.includes('liquid-lens-card'));
-    assert.ok(LIQUID_LENS_CLASSES.modal.includes('liquid-lens-modal'));
-    assert.ok(LIQUID_LENS_TOKENS.refraction.blur === '16px');
+  test('QA-5: Conformidade visual e contraste Material UI nos botões de ação e tabelas', () => {
+    assert.strictEqual(theme.palette.primary.main, '#2563eb');
+    assert.strictEqual(theme.palette.error.main, '#dc2626');
 
     // Botões de perigo e primários devem atender contraste
-    assert.strictEqual(validateLiquidLensContrast('#ffffff', '#2563eb'), true, 'Botão Primário deve ter contraste legível');
-    assert.strictEqual(validateLiquidLensContrast('#ffffff', '#dc2626'), true, 'Botão Danger deve ter contraste legível');
+    assert.strictEqual(validateMuiContrast('#ffffff', theme.palette.primary.main), true, 'Botão Primário deve ter contraste legível');
+    assert.strictEqual(validateMuiContrast('#ffffff', theme.palette.error.main), true, 'Botão Danger deve ter contraste legível');
   });
 });
