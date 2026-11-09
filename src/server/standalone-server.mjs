@@ -1832,9 +1832,25 @@ export async function startDashboardServer(port = 3000, existingStore = null) {
           return;
         }
 
-        if (pathname === '/api/v1/finance/entry' && (method === 'PUT' || method === 'POST')) {
+        if (pathname === '/api/v1/finance/cell' && (method === 'PATCH' || method === 'PUT' || method === 'POST')) {
+          const body = await readBody();
+          const result = await routeHandlers.handlePatchFinanceCell(body);
+          res.writeHead(result.status);
+          res.end(JSON.stringify(result));
+          return;
+        }
+
+        if (pathname === '/api/v1/finance/entry' && (method === 'PUT' || method === 'POST' || method === 'PATCH')) {
           const body = await readBody();
           const result = await routeHandlers.handlePutFinanceEntry(body);
+          res.writeHead(result.status);
+          res.end(JSON.stringify(result));
+          return;
+        }
+
+        if (pathname === '/api/v1/finance/line/inline' && method === 'POST') {
+          const body = await readBody();
+          const result = await routeHandlers.handlePostInlineFinanceLine(body);
           res.writeHead(result.status);
           res.end(JSON.stringify(result));
           return;

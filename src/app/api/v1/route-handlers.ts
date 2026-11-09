@@ -4,6 +4,7 @@
  */
 
 import type { SaaSStore } from '../../../server/saas-store.ts';
+import { computeFinancialLine } from '../../../domain/finance-engine.ts';
 import type {
   SaaSPlan,
   FinancialGroup,
@@ -17,6 +18,30 @@ export interface ApiResponse<T = any> {
   status: number;
   data?: T;
   error?: string;
+}
+
+function enrichFinancialLine(
+  store: SaaSStore,
+  tenantId: string,
+  line: any,
+  month: number = 1,
+  year: number = 2026,
+  refDate?: string
+) {
+  const referenceDate = refDate || `${year}-${String(month).padStart(2, '0')}-15`;
+  const computed = computeFinancialLine(line, year, month, referenceDate);
+  let kpis: any = undefined;
+  try {
+    const dash = store.getDashboard(tenantId, year, month, referenceDate);
+    kpis = dash.finance.kpis;
+  } catch {
+    // Caso de isolamento ou erro transitório
+  }
+  return {
+    ...line,
+    computed,
+    kpis,
+  };
 }
 
 export function createApiRouteHandlers(store: SaaSStore) {
@@ -96,6 +121,7 @@ export function createApiRouteHandlers(store: SaaSStore) {
       realized?: number;
       target?: number;
       settledAt?: string | null;
+      year?: number | string;
     }): Promise<ApiResponse> {
       try {
         if (!body.tenantId || !body.lineId || !body.month) {
@@ -106,23 +132,133 @@ export function createApiRouteHandlers(store: SaaSStore) {
           target: body.target,
           settledAt: body.settledAt,
         });
-        return { status: 200, data: updated };
+        const year = body.year ? Number(body.year) : 2026;
+        const enriched = enrichFinancialLine(store, body.tenantId, updated, body.month, year);
+        return { status: 200, data: enriched };
       } catch (err: any) {
         return { status: 404, error: err.message };
       }
     },
 
+    async handlePatchFinanceCell(body: {
+      tenantId: string;
+      lineId: string;
+      month: number;
+      realized?: number;
+      target?: number;
+      settledAt?: string | null;
+      field?: string;
+      value?: any;
+      year?: number | string;
+      referenceDate?: string;
+    }): Promise<ApiResponse> {
+      try {
+        if (!body.tenantId || !body.lineId) {
+          return { status: 400, error: 'Campos tenantId e lineId são obrigatórios.' };
+        }
+        const month = Number(body.month);
+        if (!month || month < 1 || month > 12) {
+          return { status: 400, error: 'Mês inválido. Deve ser um número entre 1 e 12.' };
+        }
+
+        let realized = body.realized;
+        let target = body.target;
+        let settledAt = body.settledAt;
+
+        if (body.field) {
+          if (body.field === 'realized') realized = body.value !== '' && body.value !== null && body.value !== undefined ? Number(body.value) : 0;
+          else if (body.field === 'target') target = body.value !== '' && body.value !== null && body.value !== undefined ? Number(body.value) : 0;
+          else if (body.field === 'settledAt') settledAt = body.value || null;
+        }
+
+        const updated = store.updateFinancialEntry(body.tenantId, body.lineId, month, {
+          realized,
+          target,
+          settledAt,
+        });
+
+        const year = body.year ? Number(body.year) : 2026;
+        const enriched = enrichFinancialLine(store, body.tenantId, updated, month, year, body.referenceDate);
+        return { status: 200, data: enriched };
+      } catch (err: any) {
+        const isNotFound = err.message.includes('NotFoundError') || err.message.includes('violation');
+        return { status: isNotFound ? 404 : 500, error: err.message };
+      }
+    },
+
+    async handlePostInlineFinanceLine(body: {
+      tenantId: string;
+      group?: FinancialGroup;
+      name?: string;
+      profile?: ProfileType;
+      subGroup?: string;
+      year?: number | string;
+    }): Promise<ApiResponse> {
+      try {
+        if (!body.tenantId || typeof body.tenantId !== 'string' || body.tenantId.trim() === '') {
+          return { status: 400, error: 'O campo tenantId é obrigatório.' };
+        }
+
+        const validGroups: FinancialGroup[] = [
+          'RECEITAS',
+          'INVESTIMENTOS',
+          'DESPESAS_FIXAS',
+          'DESPESAS_VARIAVEIS',
+          'RECURSOS_FINANCEIROS',
+        ];
+
+        const group = body.group || 'RECURSOS_FINANCEIROS';
+        if (!validGroups.includes(group)) {
+          return {
+            status: 400,
+            error: `Grupo financeiro inválido: '${body.group}'. Deve ser um dos: ${validGroups.join(', ')}.`,
+          };
+        }
+
+        // Valida se o tenant existe para garantir isolamento multi-tenant estrito
+        try {
+          store.getTenant(body.tenantId);
+        } catch (err: any) {
+          return { status: 404, error: err.message };
+        }
+
+        const name = typeof body.name === 'string' && body.name.trim() !== ''
+          ? body.name.trim()
+          : 'Nova Linha';
+        const profile: ProfileType = body.profile === 'PJ' ? 'PJ' : 'PF';
+
+        const created = store.createFinancialLine(body.tenantId, {
+          name,
+          profile,
+          group,
+          subGroup: body.subGroup,
+        });
+
+        const year = body.year ? Number(body.year) : 2026;
+        const enriched = enrichFinancialLine(store, body.tenantId, created, 1, year);
+        return { status: 201, data: enriched };
+      } catch (err: any) {
+        const isNotFound = err.message.includes('NotFoundError') || err.message.includes('violation');
+        return { status: isNotFound ? 404 : 500, error: err.message };
+      }
+    },
+
     async handlePostFinanceLine(body: {
       tenantId: string;
-      name: string;
+      name?: string;
       profile?: ProfileType;
       group?: FinancialGroup;
       subGroup?: string;
       dueDay?: number;
       linkedCardId?: string;
       months?: Record<number, Partial<MonthlyTriad>>;
+      isInline?: boolean;
+      year?: number | string;
     }): Promise<ApiResponse> {
       try {
+        if (body.isInline || (body as any).inline) {
+          return this.handlePostInlineFinanceLine(body);
+        }
         if (!body.tenantId || !body.name || typeof body.name !== 'string' || body.name.trim() === '') {
           return { status: 400, error: 'Campos tenantId e name são obrigatórios.' };
         }
@@ -135,7 +271,9 @@ export function createApiRouteHandlers(store: SaaSStore) {
           linkedCardId: body.linkedCardId,
           months: body.months,
         });
-        return { status: 201, data: created };
+        const year = body.year ? Number(body.year) : 2026;
+        const enriched = enrichFinancialLine(store, body.tenantId, created, 1, year);
+        return { status: 201, data: enriched };
       } catch (err: any) {
         return { status: 500, error: err.message };
       }
@@ -151,6 +289,7 @@ export function createApiRouteHandlers(store: SaaSStore) {
       dueDay?: number;
       linkedCardId?: string;
       months?: Record<number, Partial<MonthlyTriad>>;
+      year?: number | string;
     }): Promise<ApiResponse> {
       try {
         if (!body.tenantId || !body.lineId) {
@@ -165,7 +304,9 @@ export function createApiRouteHandlers(store: SaaSStore) {
           linkedCardId: body.linkedCardId,
           months: body.months,
         });
-        return { status: 200, data: updated };
+        const year = body.year ? Number(body.year) : 2026;
+        const enriched = enrichFinancialLine(store, body.tenantId, updated, 1, year);
+        return { status: 200, data: enriched };
       } catch (err: any) {
         const isNotFound = err.message.includes('NotFoundError') || err.message.includes('violation');
         return { status: isNotFound ? 404 : 500, error: err.message };
