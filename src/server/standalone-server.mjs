@@ -7,7 +7,6 @@ import http from 'node:http';
 import { URL } from 'node:url';
 import { SaaSStore } from './saas-store.ts';
 import { createApiRouteHandlers } from '../app/api/v1/route-handlers.ts';
-import { LIQUID_LENS_CLASSES, LIQUID_LENS_TOKENS } from '../components/liquid-lens/tokens.ts';
 
 /**
  * Popula o tenant demonstrativo com dados ilustrativos cobrindo os 4 módulos,

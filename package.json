@@ -17,6 +17,11 @@
     "check:agent-setup": "python3 scripts/check_agent_setup.py"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.5.0",
+    "@mui/material": "^9.5.0",
+    "@mui/material-nextjs": "^9.5.0",
     "@prisma/client": "^5.22.0",
     "next": "^15.1.6",
     "react": "^18.3.1",

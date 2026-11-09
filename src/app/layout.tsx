@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import '../components/liquid-lens/liquid-lens.css';
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
+import ThemeRegistry from '../theme/ThemeRegistry';
 
 export const metadata = {
   title: 'Avance SaaS Multi-Tenant — Dashboard Financeiro e de Metas',
-  description: 'Sistema SaaS Multi-Tenant com Design System Liquid Lens / Liquid Glass UI (ADR-0002 / AV-98)',
+  description: 'Sistema SaaS Multi-Tenant com Material UI (ADR-0004 / AV-111)',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -13,7 +14,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
-      <body className="liquid-lens-theme">{children}</body>
+      <body>
+        <AppRouterCacheProvider>
+          <ThemeRegistry>{children}</ThemeRegistry>
+        </AppRouterCacheProvider>
+      </body>
     </html>
   );
 }

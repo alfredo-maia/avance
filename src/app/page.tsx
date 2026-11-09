@@ -1,12 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  LiquidLensCard,
-  LiquidLensDock,
-  LiquidLensModal,
-  LiquidLensBadge,
-} from '../components/liquid-lens/index.ts';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 
 export type FinancialGroup =
   | 'RECURSOS_FINANCEIROS'
@@ -26,9 +34,82 @@ export interface FinancialLineAccount {
 
 export type ResourceAccount = FinancialLineAccount;
 
+export interface MuiKpiCardProps {
+  id?: string;
+  title: string;
+  value?: string | number;
+  variant?: 'default' | 'success' | 'warning' | 'danger';
+  children?: React.ReactNode;
+}
+
 /**
- * Página principal do SaaS Multi-Tenant no Next.js App Router (ADR-0002 / AV-98 / AV-100 / AV-101 / AV-106)
- * Renderiza interface dos 4 módulos com componentes Liquid Lens / Liquid Glass UI
+ * Card de KPI padronizado com Material UI (Card, CardContent, Typography)
+ * Substitui o componente LiquidLensCard (ADR-0004 / AV-111).
+ */
+function MuiKpiCard({
+  id,
+  title,
+  value,
+  variant = 'default',
+  children,
+}: MuiKpiCardProps) {
+  const getBorderColor = () => {
+    if (variant === 'success') return '#16a34a';
+    if (variant === 'danger') return '#dc2626';
+    if (variant === 'warning') return '#d97706';
+    return '#2563eb';
+  };
+
+  const getValueColor = () => {
+    if (variant === 'success') return '#16a34a';
+    if (variant === 'danger') return '#dc2626';
+    if (variant === 'warning') return '#d97706';
+    return '#0f172a';
+  };
+
+  return (
+    <Card
+      id={id}
+      className={`kpi-card MuiCard-root ${variant !== 'default' ? `variant-${variant}` : ''}`}
+      sx={{
+        borderRadius: 2,
+        border: '1px solid #e2e8f0',
+        borderTop: `4px solid ${getBorderColor()}`,
+        boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.08)',
+        p: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+      }}
+      tabIndex={0}
+      aria-label={title}
+    >
+      <CardContent sx={{ p: '0 !important' }}>
+        <Typography
+          variant="body2"
+          className="kpi-label"
+          sx={{ color: '#64748b', fontWeight: 500, mb: 0.5 }}
+        >
+          {title}
+        </Typography>
+        {value !== undefined && (
+          <Typography
+            variant="h5"
+            className={`kpi-value ${variant !== 'default' ? variant : ''}`}
+            sx={{ fontWeight: 700, color: getValueColor() }}
+          >
+            {value}
+          </Typography>
+        )}
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Página principal do SaaS Multi-Tenant no Next.js App Router (ADR-0004 / AV-111)
+ * Renderiza interface dos 4 módulos com componentes Material UI (MUI v5/v6)
  * e Grade Inline contínua de 12 meses (Jan..Dez) sem modais para todos os 5 grupos financeiros.
  */
 export default function DashboardPage() {
@@ -116,10 +197,10 @@ export default function DashboardPage() {
   ]);
 
   const dockTabs = [
-    { id: 'tab-finance', label: '1. Controle Finanças', targetPanelId: 'panel-finance' },
-    { id: 'tab-cards', label: '2. Cartões de Crédito', targetPanelId: 'panel-cards' },
-    { id: 'tab-goals', label: '3. Propósitos e Metas', targetPanelId: 'panel-goals' },
-    { id: 'tab-action-plan', label: '4. Plano de Ação', targetPanelId: 'panel-action-plan' },
+    { id: 'tab-finance', btnId: 'tab-btn-finance', label: '1. Controle Finanças', targetPanelId: 'tab-finance' },
+    { id: 'tab-cards', btnId: 'tab-btn-cards', label: '2. Cartões de Crédito', targetPanelId: 'tab-cards' },
+    { id: 'tab-goals', btnId: 'tab-btn-goals', label: '3. Propósitos e Metas', targetPanelId: 'tab-goals' },
+    { id: 'tab-action-plan', btnId: 'tab-btn-action-plan', label: '4. Plano de Ação', targetPanelId: 'tab-action-plan' },
   ];
 
   const handleCreateTenant = (e: React.FormEvent<HTMLFormElement>) => {
@@ -134,7 +215,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Inserção inline direta de nova linha (AC-3)
+  // Inserção inline direta de nova linha (AC-3 / AV-106)
   const handleAddInlineLine = (group: FinancialGroup) => {
     const newId = `line-${Date.now()}`;
     const newLine: FinancialLineAccount = {
@@ -151,7 +232,7 @@ export default function DashboardPage() {
     }, 50);
   };
 
-  // Edição inline célula a célula (AC-2)
+  // Edição inline célula a célula (AC-2 / AV-106)
   const handleCellChange = (lineId: string, month: number, value: string) => {
     const num = value !== '' ? parseFloat(value) : 0;
     setFinancialLines((prev) =>
@@ -181,14 +262,14 @@ export default function DashboardPage() {
     );
   };
 
-  // Exclusão inline instantânea (AC-4)
+  // Exclusão inline instantânea (AC-4 / AV-106)
   const handleDeleteResource = (id: string, name: string) => {
     if (confirm(`Deseja realmente excluir "${name || 'esta linha'}"?`)) {
       setFinancialLines((prev) => prev.filter((r) => r.id !== id));
     }
   };
 
-  // Regra do Último Saldo Informado para Recursos Financeiros (AC-5)
+  // Regra do Último Saldo Informado para Recursos Financeiros (AC-5 / AV-106)
   const getLastBalance = (res: FinancialLineAccount): number => {
     for (let m = 12; m >= 1; m--) {
       const val = res.months[m]?.realized ?? 0;
@@ -197,7 +278,7 @@ export default function DashboardPage() {
     return 0;
   };
 
-  // Regra da Soma Acumulada Anual dos 12 Meses para grupos de Fluxo (AC-5)
+  // Regra da Soma Acumulada Anual dos 12 Meses para grupos de Fluxo (AC-5 / AV-106)
   const getAnnualSum = (line: FinancialLineAccount): number => {
     let sum = 0;
     for (let m = 1; m <= 12; m++) {
@@ -206,7 +287,7 @@ export default function DashboardPage() {
     return sum;
   };
 
-  // Filtro de Visão PF / PJ (AC-6)
+  // Filtro de Visão PF / PJ (AC-6 / AV-106)
   const visibleLines = financialLines.filter(
     (l) => profileFilter === 'ALL' || l.profile === profileFilter
   );
@@ -298,39 +379,85 @@ export default function DashboardPage() {
   ];
 
   return (
-    <main className="app-wrapper">
-      {/* Header Liquid Lens */}
-      <header className="saas-header" role="banner">
-        <div className="header-brand">
-          <h1 className="brand-title">Avance SaaS</h1>
-          <LiquidLensBadge id="plan-badge">{tenantPlan}</LiquidLensBadge>
-          <button
+    <main className="app-wrapper" style={{ maxWidth: '1440px', margin: '0 auto', padding: '1rem' }}>
+      {/* Header com Material UI (Chip, Button, Typography) */}
+      <header
+        className="saas-header"
+        role="banner"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '1rem 1.25rem',
+          background: '#ffffff',
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0',
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.06)',
+        }}
+      >
+        <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Typography variant="h5" component="h1" className="brand-title" sx={{ fontWeight: 700, color: '#0f172a' }}>
+            Avance SaaS
+          </Typography>
+          <Chip
+            id="plan-badge"
+            label={tenantPlan}
+            color="primary"
+            size="small"
+            className="badge badge-plan MuiChip-root"
+            sx={{ fontWeight: 700, borderRadius: 1 }}
+          />
+          <Button
             id="btn-new-tenant"
             type="button"
+            variant="contained"
+            color="primary"
             className="btn-primary"
             onClick={() => setIsModalOpen(true)}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             + Novo Tenant
-          </button>
+          </Button>
         </div>
 
-        <div className="header-controls">
-          <div className="control-group">
-            <label htmlFor="tenant-select">Tenant:</label>
+        <div className="header-controls" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="control-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label htmlFor="tenant-select" style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569' }}>
+              Tenant:
+            </label>
             <select
               id="tenant-select"
               value={tenantName}
               onChange={(e) => setTenantName(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                fontSize: '0.875rem',
+                backgroundColor: '#f8fafc',
+              }}
             >
               <option value={tenantName}>{tenantName}</option>
             </select>
           </div>
-          <div className="control-group">
-            <label htmlFor="profile-filter">Visão:</label>
+          <div className="control-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label htmlFor="profile-filter" style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569' }}>
+              Visão:
+            </label>
             <select
               id="profile-filter"
               value={profileFilter}
               onChange={(e) => setProfileFilter(e.target.value as 'ALL' | 'PF' | 'PJ')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                fontSize: '0.875rem',
+                backgroundColor: '#f8fafc',
+              }}
             >
               <option value="ALL">Todos (PF + PJ)</option>
               <option value="PF">Pessoa Física (PF)</option>
@@ -340,45 +467,77 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Dock de Abas com Efeito Líquido */}
-      <LiquidLensDock
-        items={dockTabs}
-        activeId={activeTab}
-        onTabChange={(tabId) => setActiveTab(tabId)}
-      />
+      {/* Dock de Abas com Material UI Tabs & Tab */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }} className="tab-nav">
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          aria-label="Navegação dos 4 Módulos"
+          role="tablist"
+          className="tab-nav-tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          {dockTabs.map((tab) => (
+            <Tab
+              key={tab.id}
+              id={tab.btnId}
+              value={tab.id}
+              label={tab.label}
+              className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+              aria-controls={tab.targetPanelId}
+              role="tab"
+              sx={{ fontWeight: 600, textTransform: 'none', fontSize: '0.95rem' }}
+            />
+          ))}
+        </Tabs>
+      </Box>
 
       {/* Módulo 1: Controle Finanças */}
       {activeTab === 'tab-finance' && (
-        <section id="panel-finance" className="tab-panel" style={{ display: 'block' }}>
-          <div className="kpi-grid">
-            <LiquidLensCard
+        <section
+          id="tab-finance"
+          aria-labelledby="tab-btn-finance"
+          className="tab-panel"
+          style={{ display: 'block' }}
+        >
+          <div
+            className="kpi-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '1rem',
+              marginBottom: '1.5rem',
+            }}
+          >
+            <MuiKpiCard
               id="kpi-received"
               title="Recebido no Mês"
               value={`R$ ${monthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               variant="success"
             />
-            <LiquidLensCard id="kpi-to-receive" title="A Receber no Mês" value="R$ 0,00" />
-            <LiquidLensCard
+            <MuiKpiCard id="kpi-to-receive" title="A Receber no Mês" value="R$ 0,00" />
+            <MuiKpiCard
               id="kpi-paid"
               title="Pago no Mês (Despesas)"
               value={`R$ ${(monthFixedExpenses + monthVariableExpenses).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
             />
-            <LiquidLensCard id="kpi-to-pay" title="A Pagar no Mês" value="R$ 0,00" />
-            <LiquidLensCard id="kpi-overdue-count" title="Contas Atrasadas" value="0 contas" />
-            <LiquidLensCard id="kpi-overdue-amount" title="Valor em Atraso" value="R$ 0,00" />
-            <LiquidLensCard
+            <MuiKpiCard id="kpi-to-pay" title="A Pagar no Mês" value="R$ 0,00" />
+            <MuiKpiCard id="kpi-overdue-count" title="Contas Atrasadas" value="0 contas" />
+            <MuiKpiCard id="kpi-overdue-amount" title="Valor em Atraso" value="R$ 0,00" />
+            <MuiKpiCard
               id="kpi-month-result"
               title="Resultado Final do Mês (DRE)"
               value={`R$ ${monthFinalResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               variant={monthFinalResult >= 0 ? 'success' : 'danger'}
             />
-            <LiquidLensCard
+            <MuiKpiCard
               id="kpi-accumulated-result"
               title="Resultado Acumulado Ano"
               value={`R$ ${accumulatedResultYear.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               variant={accumulatedResultYear >= 0 ? 'success' : 'danger'}
             />
-            <LiquidLensCard
+            <MuiKpiCard
               id="kpi-patrimony-balance"
               title="Patrimônio (Último Saldo)"
               value={`R$ ${totalPatrimony.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
@@ -389,10 +548,16 @@ export default function DashboardPage() {
           {groupsConfig.map((grp) => {
             const lines = visibleLines.filter((l) => l.group === grp.group);
             return (
-              <div
+              <Card
                 key={grp.group}
-                className="section-card liquid-lens"
-                style={{ marginBottom: '1.25rem' }}
+                className="section-card MuiCard-root"
+                sx={{
+                  mb: 2.5,
+                  p: 2.5,
+                  borderRadius: 2,
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.08)',
+                }}
               >
                 <div
                   className="section-header"
@@ -403,43 +568,48 @@ export default function DashboardPage() {
                     marginBottom: '1rem',
                   }}
                 >
-                  <h2 className="section-title">{grp.title}</h2>
-                  <button
+                  <Typography variant="h6" component="h2" className="section-title" sx={{ fontWeight: 600 }}>
+                    {grp.title}
+                  </Typography>
+                  <Button
                     type="button"
                     id={grp.btnId}
+                    variant="contained"
+                    color="primary"
                     className="btn-primary btn-add-inline-line"
                     onClick={() => handleAddInlineLine(grp.group)}
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
                   >
                     {grp.btnLabel}
-                  </button>
+                  </Button>
                 </div>
 
-                <div className="table-responsive">
-                  <table className="data-table" aria-label={grp.title}>
+                <div className="table-responsive" style={{ overflowX: 'auto' }}>
+                  <table className="data-table" aria-label={grp.title} style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr>
-                        <th scope="col" style={{ minWidth: '170px' }}>Conta / Linha</th>
-                        <th scope="col" style={{ width: '70px' }}>Perfil</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Jan</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Fev</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Mar</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Abr</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Mai</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Jun</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Jul</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Ago</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Set</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Out</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Nov</th>
-                        <th scope="col" style={{ minWidth: '75px' }}>Dez</th>
-                        <th scope="col" style={{ minWidth: '100px', textAlign: 'right' }}>Total Anual</th>
-                        <th scope="col" style={{ width: '80px', textAlign: 'center' }}>Ações</th>
+                      <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                        <th scope="col" style={{ minWidth: '170px', padding: '8px' }}>Conta / Linha</th>
+                        <th scope="col" style={{ width: '70px', padding: '8px' }}>Perfil</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Jan</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Fev</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Mar</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Abr</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Mai</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Jun</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Jul</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Ago</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Set</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Out</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Nov</th>
+                        <th scope="col" style={{ minWidth: '75px', padding: '8px' }}>Dez</th>
+                        <th scope="col" style={{ minWidth: '100px', textAlign: 'right', padding: '8px' }}>Total Anual</th>
+                        <th scope="col" style={{ width: '80px', textAlign: 'center', padding: '8px' }}>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {lines.length === 0 ? (
                         <tr>
-                          <td colSpan={16} style={{ textAlign: 'center', opacity: 0.6 }}>
+                          <td colSpan={16} style={{ textAlign: 'center', opacity: 0.6, padding: '16px' }}>
                             Nenhum item cadastrado neste grupo. Clique em &quot;+ Nova Linha&quot; para adicionar.
                           </td>
                         </tr>
@@ -447,8 +617,14 @@ export default function DashboardPage() {
                         lines.map((r) => {
                           const totalVal = grp.isBalanceGroup ? getLastBalance(r) : getAnnualSum(r);
                           return (
-                            <tr key={r.id} data-group={r.group} data-line-id={r.id} data-profile={r.profile}>
-                              <td>
+                            <tr
+                              key={r.id}
+                              data-group={r.group}
+                              data-line-id={r.id}
+                              data-profile={r.profile}
+                              style={{ borderBottom: '1px solid #f1f5f9' }}
+                            >
+                              <td style={{ padding: '4px' }}>
                                 <input
                                   id={`input-name-${r.id}`}
                                   type="text"
@@ -458,8 +634,8 @@ export default function DashboardPage() {
                                   onChange={(e) => handleNameChange(r.id, e.target.value)}
                                   aria-label={`Nome da Conta ${r.name}`}
                                   style={{
-                                    border: '1px solid transparent',
-                                    background: 'transparent',
+                                    border: '1px solid #cbd5e1',
+                                    background: '#ffffff',
                                     fontWeight: 600,
                                     width: '100%',
                                     padding: '4px 6px',
@@ -467,12 +643,17 @@ export default function DashboardPage() {
                                   }}
                                 />
                               </td>
-                              <td>
+                              <td style={{ padding: '4px' }}>
                                 <select
                                   className="select-inline-profile"
                                   value={r.profile}
                                   onChange={(e) => handleProfileChange(r.id, e.target.value as 'PF' | 'PJ')}
                                   aria-label={`Perfil ${r.name}`}
+                                  style={{
+                                    border: '1px solid #cbd5e1',
+                                    padding: '4px',
+                                    borderRadius: '4px',
+                                  }}
                                 >
                                   <option value="PF">PF</option>
                                   <option value="PJ">PJ</option>
@@ -481,7 +662,7 @@ export default function DashboardPage() {
                               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => {
                                 const val = r.months[m]?.realized;
                                 return (
-                                  <td key={m} data-month={m}>
+                                  <td key={m} data-month={m} style={{ padding: '4px' }}>
                                     <input
                                       type="number"
                                       step="0.01"
@@ -491,8 +672,8 @@ export default function DashboardPage() {
                                       onChange={(e) => handleCellChange(r.id, m, e.target.value)}
                                       aria-label={`Mês ${m} ${r.name}`}
                                       style={{
-                                        border: '1px solid transparent',
-                                        background: 'transparent',
+                                        border: '1px solid #cbd5e1',
+                                        background: '#ffffff',
                                         textAlign: 'right',
                                         width: '100%',
                                         padding: '4px 6px',
@@ -502,7 +683,7 @@ export default function DashboardPage() {
                                   </td>
                                 );
                               })}
-                              <td style={{ textAlign: 'right' }}>
+                              <td style={{ textAlign: 'right', padding: '8px' }}>
                                 <strong>
                                   R${' '}
                                   {totalVal.toLocaleString('pt-BR', {
@@ -510,14 +691,18 @@ export default function DashboardPage() {
                                   })}
                                 </strong>
                               </td>
-                              <td style={{ textAlign: 'center' }}>
-                                <button
+                              <td style={{ textAlign: 'center', padding: '4px' }}>
+                                <Button
                                   type="button"
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
                                   className="btn-danger btn-delete-line btn-delete-resource"
                                   onClick={() => handleDeleteResource(r.id, r.name)}
+                                  sx={{ textTransform: 'none', padding: '2px 8px', minWidth: 'auto' }}
                                 >
                                   Excluir
-                                </button>
+                                </Button>
                               </td>
                             </tr>
                           );
@@ -526,101 +711,207 @@ export default function DashboardPage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </Card>
             );
           })}
 
-          <div className="section-card liquid-lens">
-            <div className="section-header">
-              <h2 className="section-title">Evolução Mensal e Indicadores Resumo</h2>
+          <Card
+            className="section-card MuiCard-root"
+            sx={{
+              p: 2.5,
+              borderRadius: 2,
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.08)',
+            }}
+          >
+            <div className="section-header" style={{ marginBottom: '1rem' }}>
+              <Typography variant="h6" component="h2" className="section-title" sx={{ fontWeight: 600 }}>
+                Evolução Mensal e Indicadores Resumo
+              </Typography>
             </div>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-              <LiquidLensCard id="indicator-investment-rate" title="Taxa de Investimento" value="35%" />
-              <LiquidLensCard id="indicator-cards-ratio" title="Cartões ÷ Rendimento" value="28%" />
-              <LiquidLensCard id="indicator-paid-percentage" title="% Contas Pagas" value="92%" />
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <MuiKpiCard id="indicator-investment-rate" title="Taxa de Investimento" value="35%" />
+              <MuiKpiCard id="indicator-cards-ratio" title="Cartões ÷ Rendimento" value="28%" />
+              <MuiKpiCard id="indicator-paid-percentage" title="% Contas Pagas" value="92%" />
             </div>
-          </div>
+          </Card>
         </section>
       )}
 
       {/* Módulo 2: Cartões de Crédito */}
       {activeTab === 'tab-cards' && (
-        <section id="panel-cards" className="tab-panel" style={{ display: 'block' }}>
-          <div className="cards-list">
-            <LiquidLensCard title="Banco do Brasil Ourocard">
-              <p>Limite: R$ 15.000,00 | Fatura: R$ 3.420,00</p>
-            </LiquidLensCard>
-            <LiquidLensCard title="Nubank PF Mastercard Platinum">
-              <p>Limite: R$ 12.000,00 | Fatura: R$ 2.150,00</p>
-            </LiquidLensCard>
+        <section
+          id="tab-cards"
+          aria-labelledby="tab-btn-cards"
+          className="tab-panel"
+          style={{ display: 'block' }}
+        >
+          <div className="cards-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <MuiKpiCard title="Banco do Brasil Ourocard">
+              <Typography variant="body2" sx={{ color: '#475569', mt: 0.5 }}>
+                Limite: R$ 15.000,00 | Fatura: R$ 3.420,00
+              </Typography>
+            </MuiKpiCard>
+            <MuiKpiCard title="Nubank PF Mastercard Platinum">
+              <Typography variant="body2" sx={{ color: '#475569', mt: 0.5 }}>
+                Limite: R$ 12.000,00 | Fatura: R$ 2.150,00
+              </Typography>
+            </MuiKpiCard>
           </div>
         </section>
       )}
 
       {/* Módulo 3: Metas */}
       {activeTab === 'tab-goals' && (
-        <section id="panel-goals" className="tab-panel" style={{ display: 'block' }}>
-          <div className="kpi-grid">
-            <LiquidLensCard title="Metas Financeiras" value="3 ativas" variant="success" />
-            <LiquidLensCard title="Desenvolvimento Pessoal" value="2 ativas" />
-            <LiquidLensCard title="Física / Saúde" value="1 ativa" />
-            <LiquidLensCard title="Diversão / Lazer" value="1 ativa" />
+        <section
+          id="tab-goals"
+          aria-labelledby="tab-btn-goals"
+          className="tab-panel"
+          style={{ display: 'block' }}
+        >
+          <div
+            className="kpi-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '1rem',
+            }}
+          >
+            <MuiKpiCard title="Metas Financeiras" value="3 ativas" variant="success" />
+            <MuiKpiCard title="Desenvolvimento Pessoal" value="2 ativas" />
+            <MuiKpiCard title="Física / Saúde" value="1 ativa" />
+            <MuiKpiCard title="Diversão / Lazer" value="1 ativa" />
           </div>
         </section>
       )}
 
       {/* Módulo 4: Plano de Ação */}
       {activeTab === 'tab-action-plan' && (
-        <section id="panel-action-plan" className="tab-panel" style={{ display: 'block' }}>
-          <div className="kpi-grid">
-            <LiquidLensCard title="Indicadores SOMA" value="4 acompanhados" />
-            <LiquidLensCard title="Indicadores LIMITE_MAXIMO" value="2 acompanhados" />
-            <LiquidLensCard title="Indicadores ULTIMO_VALOR" value="2 acompanhados" />
-            <LiquidLensCard title="Marcos TEXTO" value="3 concluídos" variant="success" />
+        <section
+          id="tab-action-plan"
+          aria-labelledby="tab-btn-action-plan"
+          className="tab-panel"
+          style={{ display: 'block' }}
+        >
+          <div
+            className="kpi-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '1rem',
+            }}
+          >
+            <MuiKpiCard title="Indicadores SOMA" value="4 acompanhados" />
+            <MuiKpiCard title="Indicadores LIMITE_MAXIMO" value="2 acompanhados" />
+            <MuiKpiCard title="Indicadores ULTIMO_VALOR" value="2 acompanhados" />
+            <MuiKpiCard title="Marcos TEXTO" value="3 concluídos" variant="success" />
           </div>
         </section>
       )}
 
-      {/* Modal Novo Tenant (Permanece para onboarding multi-tenant) */}
-      <LiquidLensModal
+      {/* Modal Novo Tenant com Material UI Dialog */}
+      <Dialog
         id="modal-new-tenant"
-        isOpen={isModalOpen}
+        open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Cadastrar Novo Tenant"
+        aria-labelledby="modal-tenant-title"
+        slotProps={{
+          paper: {
+            className: 'modal-content MuiDialog-paper',
+            sx: { borderRadius: 2, p: 1, minWidth: { xs: '90%', sm: 480 } },
+          },
+        }}
       >
+        <DialogTitle
+          id="modal-tenant-title"
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontWeight: 700,
+          }}
+        >
+          Cadastrar Novo Tenant
+          <IconButton
+            aria-label="Fechar modal"
+            onClick={() => setIsModalOpen(false)}
+            size="small"
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
         <form onSubmit={handleCreateTenant}>
-          <div className="form-group">
-            <label htmlFor="input-tenant-name">Nome da Empresa / Tenant:</label>
-            <input
-              type="text"
-              id="input-tenant-name"
-              name="name"
-              required
-              placeholder="Ex: Avance Filial SP"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="select-tenant-plan">Plano de Assinatura:</label>
-            <select id="select-tenant-plan" name="plan">
-              <option value="PRO">PRO</option>
-              <option value="FREE">FREE</option>
-              <option value="ENTERPRISE">ENTERPRISE</option>
-            </select>
-          </div>
-          <div className="form-actions">
-            <button
+          <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 2 }}>
+            <div className="form-group">
+              <label
+                htmlFor="input-tenant-name"
+                style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500, fontSize: '0.875rem' }}
+              >
+                Nome da Empresa / Tenant:
+              </label>
+              <input
+                type="text"
+                id="input-tenant-name"
+                name="name"
+                required
+                placeholder="Ex: Avance Filial SP"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.875rem',
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label
+                htmlFor="select-tenant-plan"
+                style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500, fontSize: '0.875rem' }}
+              >
+                Plano de Assinatura:
+              </label>
+              <select
+                id="select-tenant-plan"
+                name="plan"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.875rem',
+                }}
+              >
+                <option value="PRO">PRO</option>
+                <option value="FREE">FREE</option>
+                <option value="ENTERPRISE">ENTERPRISE</option>
+              </select>
+            </div>
+          </DialogContent>
+          <DialogActions sx={{ p: 2, gap: 1 }}>
+            <Button
               type="button"
               className="btn-secondary"
+              variant="outlined"
+              color="inherit"
               onClick={() => setIsModalOpen(false)}
+              sx={{ textTransform: 'none', fontWeight: 600 }}
             >
               Cancelar
-            </button>
-            <button type="submit" className="btn-primary">
+            </Button>
+            <Button
+              type="submit"
+              id="btn-submit-tenant"
+              className="btn-primary"
+              variant="contained"
+              color="primary"
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+            >
               Salvar Tenant
-            </button>
-          </div>
+            </Button>
+          </DialogActions>
         </form>
-      </LiquidLensModal>
+      </Dialog>
     </main>
   );
 }
