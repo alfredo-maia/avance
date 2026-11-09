@@ -631,6 +631,58 @@ function renderDashboardHtml(initialData) {
       font-weight: 700;
       color: #1e293b;
     }
+    /* Grade Inline 12 Meses (Liquid Lens) */
+    .cell-inline-input {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: inherit;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.85rem;
+      font-family: inherit;
+      width: 100%;
+      box-sizing: border-box;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .cell-inline-input:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(203, 213, 225, 0.4);
+    }
+    .cell-inline-input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+    }
+    .input-inline-name {
+      text-align: left;
+      font-weight: 600;
+      min-width: 160px;
+    }
+    .input-inline-month {
+      text-align: right;
+      min-width: 75px;
+    }
+    .select-inline-profile {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: inherit;
+      padding: 0.25rem 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cell-total-anual {
+      font-weight: 700;
+      text-align: right;
+      min-width: 95px;
+      color: var(--text-primary);
+    }
+    .cell-actions {
+      text-align: center;
+      min-width: 75px;
+    }
     .badge-status {
       display: inline-block;
       padding: 0.2rem 0.5rem;
@@ -904,15 +956,22 @@ function renderDashboardHtml(initialData) {
           <table id="table-finance-matrix" class="data-table" aria-label="Matriz financeira Jan a Dez">
             <thead>
               <tr>
-                <th scope="col">Linha / Categoria</th>
-                <th scope="col">Perfil</th>
-                <th scope="col">Status Mês</th>
-                <th scope="col">Meta Mês</th>
-                <th scope="col">Realizado Mês</th>
-                <th scope="col">Previsto Mês</th>
-                <th scope="col">Total Anual</th>
-                <th scope="col">Média</th>
-                <th scope="col">Ação</th>
+                <th scope="col" style="min-width: 170px;">Conta / Linha</th>
+                <th scope="col" style="width: 70px;">Perfil</th>
+                <th scope="col" style="min-width: 75px;">Jan</th>
+                <th scope="col" style="min-width: 75px;">Fev</th>
+                <th scope="col" style="min-width: 75px;">Mar</th>
+                <th scope="col" style="min-width: 75px;">Abr</th>
+                <th scope="col" style="min-width: 75px;">Mai</th>
+                <th scope="col" style="min-width: 75px;">Jun</th>
+                <th scope="col" style="min-width: 75px;">Jul</th>
+                <th scope="col" style="min-width: 75px;">Ago</th>
+                <th scope="col" style="min-width: 75px;">Set</th>
+                <th scope="col" style="min-width: 75px;">Out</th>
+                <th scope="col" style="min-width: 75px;">Nov</th>
+                <th scope="col" style="min-width: 75px;">Dez</th>
+                <th scope="col" style="min-width: 100px; text-align: right;">Total Anual</th>
+                <th scope="col" style="width: 80px; text-align: center;">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -926,42 +985,49 @@ function renderDashboardHtml(initialData) {
                   DESPESAS_VARIAVEIS: 'Despesas Variáveis',
                 }[grp];
                 const btnConfig = {
-                  RECURSOS_FINANCEIROS: { id: 'btn-new-resource', label: '+ Nova Conta / Recurso' },
-                  RECEITAS: { id: 'btn-new-receitas', label: '+ Nova Receita' },
-                  INVESTIMENTOS: { id: 'btn-new-investimentos', label: '+ Novo Investimento' },
-                  DESPESAS_FIXAS: { id: 'btn-new-despesas-fixas', label: '+ Nova Despesa Fixa' },
-                  DESPESAS_VARIAVEIS: { id: 'btn-new-despesas-variaveis', label: '+ Nova Despesa Variável' },
+                  RECURSOS_FINANCEIROS: { id: 'btn-new-resource', label: '+ Nova Linha' },
+                  RECEITAS: { id: 'btn-new-receitas', label: '+ Nova Linha' },
+                  INVESTIMENTOS: { id: 'btn-new-investimentos', label: '+ Nova Linha' },
+                  DESPESAS_FIXAS: { id: 'btn-new-despesas-fixas', label: '+ Nova Linha' },
+                  DESPESAS_VARIAVEIS: { id: 'btn-new-despesas-variaveis', label: '+ Nova Linha' },
                 }[grp];
 
                 return `
-                  <tr class="finance-group-header">
-                    <td colspan="9">
+                  <tr class="finance-group-header" data-header-group="${grp}">
+                    <td colspan="16">
                       <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <span><strong>${groupLabel}</strong> (${groupLines.length} itens)</span>
-                        <button type="button" id="${btnConfig.id}" class="btn-primary btn-add-finance-line" data-group="${grp}" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+                        <span><strong>${groupLabel}</strong> (<span class="group-count" id="count-${grp}">${groupLines.length}</span> itens)</span>
+                        <button type="button" id="${btnConfig.id}" class="btn-primary btn-add-finance-line btn-add-inline-line" data-group="${grp}" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
                           ${btnConfig.label}
                         </button>
                       </div>
                     </td>
                   </tr>
                   ${groupLines.map((l) => {
-                    const statusClass = l.referenceMonthStatus.includes('✔') ? 'status-ok' : l.referenceMonthStatus.includes('⚠') ? 'status-overdue' : l.referenceMonthStatus.includes('⏳') ? 'status-pending' : 'status-empty';
                     return `
                       <tr data-line-id="${l.id}" data-profile="${l.profile}" data-group="${l.group}">
-                        <td><strong>${l.name}</strong></td>
-                        <td><span class="badge ${l.profile === 'PF' ? 'badge-plan' : 'status-pending'}">${l.profile}</span></td>
-                        <td><span class="badge-status ${statusClass}">${l.referenceMonthStatus}</span></td>
-                        <td><span class="badge-status ${l.referenceMonthGoalStatus === 'bateu meta' ? 'status-ok' : l.referenceMonthGoalStatus === 'não bateu meta' ? 'status-overdue' : 'status-empty'}">${l.referenceMonthGoalStatus}</span></td>
-                        <td>R$ ${l.referenceMonthValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td>R$ ${(l.months[referenceMonth]?.target || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td><strong>R$ ${l.totalRealized.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></td>
-                        <td>R$ ${l.monthlyAverage.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style="white-space: nowrap;">
-                          <div style="display: flex; gap: 0.35rem; align-items: center;">
-                            <button class="btn-secondary btn-edit-entry" data-line-id="${l.id}" data-line-name="${l.name}" title="Editar Lançamento">Lançamento</button>
-                            <button class="btn-secondary btn-edit-resource btn-edit-line" data-line-id="${l.id}" data-line-name="${l.name}" data-line-profile="${l.profile}" data-line-group="${l.group}" data-line-subgroup="${l.subGroup || ''}" data-line-months='${JSON.stringify(l.months)}' title="Editar Linha e Meses">Editar</button>
-                            <button class="btn-danger btn-delete-resource btn-delete-line" data-line-id="${l.id}" data-line-name="${l.name}" data-line-group="${l.group}" title="Excluir Linha">Excluir</button>
-                          </div>
+                        <td class="cell-name">
+                          <input type="text" class="cell-inline-input input-inline-name" value="${l.name}" data-line-id="${l.id}" aria-label="Nome da Conta ${l.name}">
+                        </td>
+                        <td class="cell-profile">
+                          <select class="select-inline-profile" data-line-id="${l.id}" aria-label="Perfil ${l.name}">
+                            <option value="PF" ${l.profile === 'PF' ? 'selected' : ''}>PF</option>
+                            <option value="PJ" ${l.profile === 'PJ' ? 'selected' : ''}>PJ</option>
+                          </select>
+                        </td>
+                        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => {
+                          const val = l.months[m]?.realized;
+                          return `
+                            <td class="cell-month" data-month="${m}">
+                              <input type="number" step="0.01" class="cell-inline-input input-inline-month" data-line-id="${l.id}" data-month="${m}" data-group="${l.group}" value="${val !== undefined && val !== 0 ? val : ''}" placeholder="0,00" aria-label="Mês ${m} ${l.name}">
+                            </td>
+                          `;
+                        }).join('')}
+                        <td class="cell-total-anual" id="total-anual-${l.id}">
+                          <strong>R$ ${l.totalRealized.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                        </td>
+                        <td class="cell-actions" style="white-space: nowrap;">
+                          <button type="button" class="btn-danger btn-delete-resource btn-delete-line" data-line-id="${l.id}" data-line-name="${l.name}" data-line-group="${l.group}" title="Excluir Linha">Excluir</button>
                         </td>
                       </tr>
                     `;
@@ -1278,145 +1344,6 @@ function renderDashboardHtml(initialData) {
       </div>
     </div>
 
-    <!-- Modal Editar Lançamento Financeiro / Liquid Lens Modal -->
-    <div id="modal-edit-finance" class="modal liquid-lens-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-finance-title">
-      <div class="modal-content liquid-lens-modal">
-        <h3 id="modal-finance-title" class="modal-title">Editar Lançamento Mensal</h3>
-        <form id="form-edit-finance-entry">
-          <input type="hidden" id="edit-line-id" name="lineId">
-          <div class="form-group">
-            <label for="edit-line-name-display">Linha:</label>
-            <input type="text" id="edit-line-name-display" disabled>
-          </div>
-          <div class="form-group">
-            <label for="edit-month">Mês:</label>
-            <select id="edit-month" name="month">
-              ${['1 - Jan', '2 - Fev', '3 - Mar', '4 - Abr', '5 - Mai', '6 - Jun', '7 - Jul', '8 - Ago', '9 - Set', '10 - Out', '11 - Nov', '12 - Dez']
-                .map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="edit-realized">Valor Realizado (R$):</label>
-            <input type="number" id="edit-realized" name="realized" step="0.01" min="0">
-          </div>
-          <div class="form-group">
-            <label for="edit-target">Meta / Previsto (R$):</label>
-            <input type="number" id="edit-target" name="target" step="0.01" min="0">
-          </div>
-          <div class="form-group">
-            <label for="edit-settled-at">Data de Liquidação (Pago/Recebido em):</label>
-            <input type="date" id="edit-settled-at" name="settledAt">
-          </div>
-          <div class="form-actions">
-            <button type="button" id="btn-cancel-edit-finance" class="btn-secondary">Cancelar</button>
-            <button type="submit" id="btn-submit-edit-finance" class="btn-primary">Salvar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Modal Nova Conta / Recurso Financeiro / Liquid Lens Modal -->
-    <div id="modal-new-resource" class="modal liquid-lens-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-new-resource-title">
-      <div class="modal-content liquid-lens-modal">
-        <h3 id="modal-new-resource-title" class="modal-title">Nova Conta / Linha Financeira</h3>
-        <form id="form-new-resource">
-          <input type="hidden" id="input-resource-group" name="group" value="RECURSOS_FINANCEIROS">
-          <div class="form-group">
-            <label for="input-resource-name">Nome da Conta / Linha:</label>
-            <input type="text" id="input-resource-name" name="name" required placeholder="Ex: Investimento CDB DI, Caixa Poupança, etc.">
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-            <div class="form-group">
-              <label for="select-resource-profile">Perfil:</label>
-              <select id="select-resource-profile" name="profile">
-                <option value="PF">Pessoa Física (PF)</option>
-                <option value="PJ">Pessoa Jurídica (PJ)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="select-resource-group">Grupo Financeiro:</label>
-              <select id="select-resource-group" name="groupSelect">
-                <option value="RECURSOS_FINANCEIROS">Recursos Financeiros</option>
-                <option value="RECEITAS">Receitas</option>
-                <option value="INVESTIMENTOS">Investimentos</option>
-                <option value="DESPESAS_FIXAS">Despesas Fixas</option>
-                <option value="DESPESAS_VARIAVEIS">Despesas Variáveis</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="input-resource-subgroup">Categoria / Subgrupo (Opcional):</label>
-            <input type="text" id="input-resource-subgroup" name="subGroup" placeholder="Ex: Operacional, Lazer, Moradia...">
-          </div>
-          <div class="form-actions">
-            <button type="button" id="btn-cancel-new-resource" class="btn-secondary">Cancelar</button>
-            <button type="submit" id="btn-submit-new-resource" class="btn-primary">Criar Linha</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Modal Editar Recurso Financeiro & Saldos / Liquid Lens Modal -->
-    <div id="modal-edit-resource" class="modal liquid-lens-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-edit-resource-title">
-      <div class="modal-content liquid-lens-modal liquid-lens-modal-wide">
-        <h3 id="modal-edit-resource-title" class="modal-title">Editar Linha Financeira & Saldos</h3>
-        <form id="form-edit-resource">
-          <input type="hidden" id="edit-resource-line-id" name="lineId">
-          <input type="hidden" id="edit-resource-group-val" name="group">
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
-            <div class="form-group">
-              <label for="edit-resource-name">Nome da Conta / Linha:</label>
-              <input type="text" id="edit-resource-name" name="name" required>
-            </div>
-            <div class="form-group">
-              <label for="edit-resource-profile">Perfil:</label>
-              <select id="edit-resource-profile" name="profile">
-                <option value="PF">Pessoa Física (PF)</option>
-                <option value="PJ">Pessoa Jurídica (PJ)</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-            <div class="form-group">
-              <label for="edit-resource-group-select">Grupo Financeiro:</label>
-              <select id="edit-resource-group-select" name="groupSelect">
-                <option value="RECURSOS_FINANCEIROS">Recursos Financeiros</option>
-                <option value="RECEITAS">Receitas</option>
-                <option value="INVESTIMENTOS">Investimentos</option>
-                <option value="DESPESAS_FIXAS">Despesas Fixas</option>
-                <option value="DESPESAS_VARIAVEIS">Despesas Variáveis</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="edit-resource-subgroup">Categoria / Subgrupo:</label>
-              <input type="text" id="edit-resource-subgroup" name="subGroup" placeholder="Ex: Operacional, Lazer...">
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-top: 0.5rem;">
-            <label id="edit-resource-consolidation-label"><strong>Saldos Mensais (Jan..Dez) — Regra do Último Saldo Informado:</strong></label>
-            <div class="months-balance-grid">
-              ${['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((mName, idx) => {
-                const mNum = idx + 1;
-                return `
-                  <div class="month-balance-item">
-                    <label>${mNum} - ${mName}</label>
-                    <input type="number" step="0.01" min="0" placeholder="Realizado R$" id="edit-resource-realized-${mNum}" data-month="${mNum}" class="input-resource-month-realized">
-                    <input type="number" step="0.01" min="0" placeholder="Meta R$" id="edit-resource-target-${mNum}" data-month="${mNum}" class="input-resource-month-target">
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" id="btn-cancel-edit-resource" class="btn-secondary">Cancelar</button>
-            <button type="submit" id="btn-submit-edit-resource" class="btn-primary">Salvar Alterações</button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
 
   <!-- Script Cliente Interativo e Reativo -->
@@ -1478,6 +1405,9 @@ function renderDashboardHtml(initialData) {
             row.style.display = 'none';
           }
         });
+        if (typeof recalculateDRE === 'function') {
+          recalculateDRE();
+        }
       });
     }
 
@@ -1521,227 +1451,303 @@ function renderDashboardHtml(initialData) {
       });
     }
 
-    // Modal Edit Finance Entry
-    const modalEditFinance = document.getElementById('modal-edit-finance');
-    const btnCancelEditFinance = document.getElementById('btn-cancel-edit-finance');
-    const formEditFinance = document.getElementById('form-edit-finance-entry');
+    // Recálculo determinístico em tempo real de DRE e KPIs
+    function recalculateDRE() {
+      const rows = document.querySelectorAll('#table-finance-matrix tbody tr[data-line-id]');
+      const profileFilter = document.getElementById('profile-filter')?.value || 'ALL';
 
-    document.querySelectorAll('.btn-edit-entry').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const lineId = btn.getAttribute('data-line-id');
-        const lineName = btn.getAttribute('data-line-name');
-        document.getElementById('edit-line-id').value = lineId;
-        document.getElementById('edit-line-name-display').value = lineName;
-        modalEditFinance.classList.add('open');
-      });
-    });
+      let monthRevenue = 0;
+      let monthInvestments = 0;
+      let monthFixedExpenses = 0;
+      let monthVariableExpenses = 0;
+      let totalPatrimony = 0;
 
-    btnCancelEditFinance?.addEventListener('click', () => {
-      modalEditFinance.classList.remove('open');
-    });
+      let annualRevenue = 0;
+      let annualInvestments = 0;
+      let annualFixedExpenses = 0;
+      let annualVariableExpenses = 0;
 
-    formEditFinance?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const tenantId = document.getElementById('tenant-select').value;
-      const lineId = document.getElementById('edit-line-id').value;
-      const month = Number(document.getElementById('edit-month').value);
-      const realized = Number(document.getElementById('edit-realized').value);
-      const target = Number(document.getElementById('edit-target').value);
-      const settledAt = document.getElementById('edit-settled-at').value || null;
+      rows.forEach(row => {
+        const profile = row.getAttribute('data-profile');
+        if (profileFilter !== 'ALL' && profile !== profileFilter) return;
 
-      try {
-        const res = await fetch('/api/v1/finance/entry', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenantId, lineId, month, realized, target, settledAt })
-        });
-        if (res.ok) {
-          modalEditFinance.classList.remove('open');
-          window.location.reload();
-        }
-      } catch (err) {
-        alert('Erro ao atualizar lançamento: ' + err.message);
-      }
-    });
+        const group = row.getAttribute('data-group');
+        const monthInputs = row.querySelectorAll('.input-inline-month');
 
-    // Modal New Resource / Line
-    const modalNewResource = document.getElementById('modal-new-resource');
-    const btnCancelNewResource = document.getElementById('btn-cancel-new-resource');
-    const formNewResource = document.getElementById('form-new-resource');
+        let rowSum = 0;
+        let lastVal = 0;
+        monthInputs.forEach(input => {
+          const m = Number(input.getAttribute('data-month'));
+          const v = parseFloat(input.value) || 0;
+          rowSum += v;
+          if (v > 0) lastVal = v;
 
-    document.querySelectorAll('.btn-add-finance-line').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const grp = btn.getAttribute('data-group') || 'RECURSOS_FINANCEIROS';
-        const groupInput = document.getElementById('input-resource-group');
-        const groupSelect = document.getElementById('select-resource-group');
-        if (groupInput) groupInput.value = grp;
-        if (groupSelect) groupSelect.value = grp;
-
-        const titleEl = document.getElementById('modal-new-resource-title');
-        if (titleEl) {
-          titleEl.textContent = grp === 'RECURSOS_FINANCEIROS'
-            ? 'Nova Conta / Recurso Financeiro'
-            : 'Novo Item — ' + (grp === 'RECEITAS' ? 'Receita' : grp === 'INVESTIMENTOS' ? 'Investimento' : grp === 'DESPESAS_FIXAS' ? 'Despesa Fixa' : 'Despesa Variável');
-        }
-        modalNewResource?.classList.add('open');
-      });
-    });
-
-    const selectResourceGroup = document.getElementById('select-resource-group');
-    selectResourceGroup?.addEventListener('change', (e) => {
-      const groupInput = document.getElementById('input-resource-group');
-      if (groupInput) groupInput.value = e.target.value;
-    });
-
-    btnCancelNewResource?.addEventListener('click', () => modalNewResource?.classList.remove('open'));
-
-    formNewResource?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const tenantId = document.getElementById('tenant-select').value;
-      const name = document.getElementById('input-resource-name').value;
-      const profile = document.getElementById('select-resource-profile').value;
-      const group = document.getElementById('input-resource-group')?.value || 'RECURSOS_FINANCEIROS';
-      const subGroup = document.getElementById('input-resource-subgroup')?.value || undefined;
-
-      try {
-        const res = await fetch('/api/v1/finance/line', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenantId, name, profile, group, subGroup })
-        });
-        if (res.ok) {
-          modalNewResource.classList.remove('open');
-          formNewResource.reset();
-          window.location.reload();
-        } else {
-          const err = await res.json();
-          alert('Erro ao criar linha: ' + (err.error || res.statusText));
-        }
-      } catch (err) {
-        alert('Erro ao criar linha: ' + err.message);
-      }
-    });
-
-    // Modal Edit Resource & Balances (Linhas e Meses Jan..Dez)
-    const modalEditResource = document.getElementById('modal-edit-resource');
-    const btnCancelEditResource = document.getElementById('btn-cancel-edit-resource');
-    const formEditResource = document.getElementById('form-edit-resource');
-
-    document.querySelectorAll('.btn-edit-resource, .btn-edit-line').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const lineId = btn.getAttribute('data-line-id');
-        const lineName = btn.getAttribute('data-line-name');
-        const lineProfile = btn.getAttribute('data-line-profile');
-        const lineGroup = btn.getAttribute('data-line-group') || 'RECURSOS_FINANCEIROS';
-        const lineSubGroup = btn.getAttribute('data-line-subgroup') || '';
-        let months = {};
-        try {
-          months = JSON.parse(btn.getAttribute('data-line-months') || '{}');
-        } catch (e) {
-          months = {};
-        }
-
-        document.getElementById('edit-resource-line-id').value = lineId;
-        document.getElementById('edit-resource-name').value = lineName;
-        document.getElementById('edit-resource-profile').value = lineProfile;
-        const grpVal = document.getElementById('edit-resource-group-val');
-        if (grpVal) grpVal.value = lineGroup;
-        const grpSelect = document.getElementById('edit-resource-group-select');
-        if (grpSelect) grpSelect.value = lineGroup;
-        const subGroupInput = document.getElementById('edit-resource-subgroup');
-        if (subGroupInput) subGroupInput.value = lineSubGroup;
-
-        const labelEl = document.getElementById('edit-resource-consolidation-label');
-        if (labelEl) {
-          labelEl.innerHTML = lineGroup === 'RECURSOS_FINANCEIROS'
-            ? '<strong>Saldos Mensais (Jan..Dez) — Regra do Último Saldo Informado:</strong>'
-            : '<strong>Valores Mensais (Jan..Dez) — Consolidação por Soma Acumulada Anual (DRE / Fluxo):</strong>';
-        }
-
-        for (let m = 1; m <= 12; m++) {
-          const entry = months[m] || { realized: 0, target: 0 };
-          const realizedInput = document.getElementById('edit-resource-realized-' + m);
-          const targetInput = document.getElementById('edit-resource-target-' + m);
-          if (realizedInput) realizedInput.value = entry.realized || '';
-          if (targetInput) targetInput.value = entry.target || '';
-        }
-
-        modalEditResource.classList.add('open');
-      });
-    });
-
-    const editResourceGroupSelect = document.getElementById('edit-resource-group-select');
-    editResourceGroupSelect?.addEventListener('change', (e) => {
-      const grpVal = document.getElementById('edit-resource-group-val');
-      if (grpVal) grpVal.value = e.target.value;
-    });
-
-    btnCancelEditResource?.addEventListener('click', () => {
-      modalEditResource.classList.remove('open');
-    });
-
-    formEditResource?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const tenantId = document.getElementById('tenant-select').value;
-      const lineId = document.getElementById('edit-resource-line-id').value;
-      const name = document.getElementById('edit-resource-name').value;
-      const profile = document.getElementById('edit-resource-profile').value;
-      const group = document.getElementById('edit-resource-group-val')?.value;
-      const subGroup = document.getElementById('edit-resource-subgroup')?.value || undefined;
-
-      const months = {};
-      for (let m = 1; m <= 12; m++) {
-        const realizedVal = document.getElementById('edit-resource-realized-' + m)?.value;
-        const targetVal = document.getElementById('edit-resource-target-' + m)?.value;
-        months[m] = {
-          realized: realizedVal !== '' && realizedVal !== undefined ? Number(realizedVal) : 0,
-          target: targetVal !== '' && targetVal !== undefined ? Number(targetVal) : 0,
-        };
-      }
-
-      try {
-        const res = await fetch('/api/v1/finance/line', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenantId, lineId, name, profile, group, subGroup, months })
-        });
-        if (res.ok) {
-          modalEditResource.classList.remove('open');
-          window.location.reload();
-        } else {
-          const err = await res.json();
-          alert('Erro ao atualizar linha: ' + (err.error || res.statusText));
-        }
-      } catch (err) {
-        alert('Erro ao atualizar linha: ' + err.message);
-      }
-    });
-
-    // Delete Line (Remoção imediata da grade e feedback sem recarregar página - AC-4)
-    document.querySelectorAll('.btn-delete-resource, .btn-delete-line').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const lineId = btn.getAttribute('data-line-id');
-        const lineName = btn.getAttribute('data-line-name');
-        const tenantId = document.getElementById('tenant-select').value;
-        if (confirm('Deseja realmente excluir "' + lineName + '"?')) {
-          try {
-            const res = await fetch('/api/v1/finance/line', {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tenantId, lineId })
-            });
-            if (res.ok) {
-              const tr = btn.closest('tr');
-              if (tr) {
-                tr.remove();
-              }
-            } else {
-              const err = await res.json();
-              alert('Erro ao excluir item: ' + (err.error || res.statusText));
-            }
-          } catch (err) {
-            alert('Erro ao excluir item: ' + err.message);
+          // Mês de referência (1)
+          if (m === 1) {
+            if (group === 'RECEITAS') monthRevenue += v;
+            else if (group === 'INVESTIMENTOS') monthInvestments += v;
+            else if (group === 'DESPESAS_FIXAS') monthFixedExpenses += v;
+            else if (group === 'DESPESAS_VARIAVEIS') monthVariableExpenses += v;
           }
+
+          if (group === 'RECEITAS') annualRevenue += v;
+          else if (group === 'INVESTIMENTOS') annualInvestments += v;
+          else if (group === 'DESPESAS_FIXAS') annualFixedExpenses += v;
+          else if (group === 'DESPESAS_VARIAVEIS') annualVariableExpenses += v;
+        });
+
+        if (group === 'RECURSOS_FINANCEIROS') {
+          totalPatrimony += lastVal;
+          const totalEl = row.querySelector('.cell-total-anual strong');
+          if (totalEl) totalEl.textContent = 'R$ ' + lastVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        } else {
+          const totalEl = row.querySelector('.cell-total-anual strong');
+          if (totalEl) totalEl.textContent = 'R$ ' + rowSum.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        }
+      });
+
+      const monthFinalResult = monthRevenue - monthInvestments - monthFixedExpenses - monthVariableExpenses;
+      const accumulatedResultYear = annualRevenue - annualInvestments - annualFixedExpenses - annualVariableExpenses;
+
+      // Atualiza KPIs
+      const kpiReceived = document.getElementById('kpi-received');
+      if (kpiReceived) {
+        const valEl = kpiReceived.querySelector('.kpi-value');
+        if (valEl) valEl.textContent = 'R$ ' + monthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      }
+
+      const kpiPaid = document.getElementById('kpi-paid');
+      if (kpiPaid) {
+        const valEl = kpiPaid.querySelector('.kpi-value');
+        if (valEl) valEl.textContent = 'R$ ' + (monthFixedExpenses + monthVariableExpenses).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      }
+
+      const kpiMonthResult = document.getElementById('kpi-month-result');
+      if (kpiMonthResult) {
+        const valEl = kpiMonthResult.querySelector('.kpi-value');
+        if (valEl) valEl.textContent = 'R$ ' + monthFinalResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      }
+
+      const kpiAccumResult = document.getElementById('kpi-accumulated-result');
+      if (kpiAccumResult) {
+        const valEl = kpiAccumResult.querySelector('.kpi-value');
+        if (valEl) valEl.textContent = 'R$ ' + accumulatedResultYear.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      }
+
+      const kpiPatrimony = document.getElementById('kpi-patrimony-balance');
+      if (kpiPatrimony) {
+        const valEl = kpiPatrimony.querySelector('.kpi-value');
+        if (valEl) valEl.textContent = 'R$ ' + totalPatrimony.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      }
+    }
+
+    // Auto-save célula a célula com foco por clique / Tab / Enter
+    function attachCellListeners(row) {
+      const tenantId = document.getElementById('tenant-select')?.value;
+      const lineId = row.getAttribute('data-line-id');
+
+      // Month inputs
+      const monthInputs = row.querySelectorAll('.input-inline-month');
+      monthInputs.forEach((input, idx) => {
+        const saveCell = async () => {
+          const m = Number(input.getAttribute('data-month'));
+          const rawVal = input.value;
+          const val = rawVal !== '' ? parseFloat(rawVal) : 0;
+          const currentLineId = row.getAttribute('data-line-id') || input.getAttribute('data-line-id');
+          if (!currentLineId) return;
+
+          recalculateDRE();
+
+          try {
+            await fetch('/api/v1/finance/cell', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tenantId,
+                lineId: currentLineId,
+                month: m,
+                realized: val,
+              })
+            });
+          } catch (e) {
+            console.error('Erro no auto-save da célula:', e);
+          }
+        };
+
+        input.addEventListener('blur', saveCell);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveCell();
+            // Foca a célula da mesma coluna na linha seguinte se existir, ou o próximo input
+            const nextRow = row.nextElementSibling;
+            if (nextRow && nextRow.hasAttribute('data-line-id')) {
+              const nextInput = nextRow.querySelectorAll('.input-inline-month')[idx];
+              if (nextInput) nextInput.focus();
+            } else if (idx < monthInputs.length - 1) {
+              monthInputs[idx + 1].focus();
+            }
+          }
+        });
+      });
+
+      // Name input
+      const nameInput = row.querySelector('.input-inline-name');
+      if (nameInput) {
+        const saveName = async () => {
+          const currentLineId = row.getAttribute('data-line-id');
+          const val = nameInput.value.trim();
+          if (!currentLineId || !val) return;
+          try {
+            await fetch('/api/v1/finance/line', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tenantId, lineId: currentLineId, name: val })
+            });
+          } catch (e) {
+            console.error('Erro no auto-save do nome:', e);
+          }
+        };
+        nameInput.addEventListener('blur', saveName);
+        nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveName();
+            const profileSelect = row.querySelector('.select-inline-profile');
+            if (profileSelect) profileSelect.focus();
+          }
+        });
+      }
+
+      // Profile select
+      const profileSelect = row.querySelector('.select-inline-profile');
+      if (profileSelect) {
+        profileSelect.addEventListener('change', async () => {
+          const currentLineId = row.getAttribute('data-line-id');
+          const val = profileSelect.value;
+          row.setAttribute('data-profile', val);
+          recalculateDRE();
+          if (!currentLineId) return;
+          try {
+            await fetch('/api/v1/finance/line', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tenantId, lineId: currentLineId, profile: val })
+            });
+          } catch (e) {
+            console.error('Erro no auto-save do perfil:', e);
+          }
+        });
+      }
+
+      // Delete button
+      const delBtn = row.querySelector('.btn-delete-line');
+      if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+          const currentLineId = row.getAttribute('data-line-id');
+          const name = row.querySelector('.input-inline-name')?.value || 'esta linha';
+          if (confirm('Deseja realmente excluir "' + name + '"?')) {
+            row.remove();
+            recalculateDRE();
+            if (currentLineId) {
+              try {
+                await fetch('/api/v1/finance/line', {
+                  method: 'DELETE',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tenantId, lineId: currentLineId })
+                });
+              } catch (e) {
+                console.error('Erro ao excluir linha:', e);
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Atacha listeners a todas as linhas existentes
+    document.querySelectorAll('#table-finance-matrix tbody tr[data-line-id]').forEach(attachCellListeners);
+
+    // Inserção inline de nova linha (+ Nova Linha)
+    document.querySelectorAll('.btn-add-inline-line, .btn-add-finance-line').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const grp = btn.getAttribute('data-group') || 'RECURSOS_FINANCEIROS';
+        const tenantId = document.getElementById('tenant-select')?.value;
+
+        // Cria a linha na API primeiro para obter o ID
+        let createdLine = null;
+        try {
+          const res = await fetch('/api/v1/finance/line/inline', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tenantId,
+              group: grp,
+              name: '',
+              profile: 'PF',
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            createdLine = data.data;
+          }
+        } catch (e) {
+          console.error('Erro ao criar linha inline:', e);
+        }
+
+        const lineId = createdLine ? createdLine.id : 'temp-' + Date.now();
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-line-id', lineId);
+        tr.setAttribute('data-profile', 'PF');
+        tr.setAttribute('data-group', grp);
+
+        let monthsHtml = '';
+        for (let m = 1; m <= 12; m++) {
+          monthsHtml += '<td class="cell-month" data-month="' + m + '">' +
+            '<input type="number" step="0.01" class="cell-inline-input input-inline-month" data-line-id="' + lineId + '" data-month="' + m + '" data-group="' + grp + '" placeholder="0,00" aria-label="Mês ' + m + '">' +
+            '</td>';
+        }
+
+        tr.innerHTML = '<td class="cell-name">' +
+          '<input type="text" class="cell-inline-input input-inline-name" placeholder="Nome da conta..." data-line-id="' + lineId + '" aria-label="Nome da Conta">' +
+          '</td>' +
+          '<td class="cell-profile">' +
+          '<select class="select-inline-profile" data-line-id="' + lineId + '" aria-label="Perfil">' +
+          '<option value="PF" selected>PF</option>' +
+          '<option value="PJ">PJ</option>' +
+          '</select>' +
+          '</td>' +
+          monthsHtml +
+          '<td class="cell-total-anual" id="total-anual-' + lineId + '"><strong>R$ 0,00</strong></td>' +
+          '<td class="cell-actions" style="white-space: nowrap;">' +
+          '<button type="button" class="btn-danger btn-delete-resource btn-delete-line" data-line-id="' + lineId + '" title="Excluir Linha">Excluir</button>' +
+          '</td>';
+
+        // Localiza a posição correta para inserção: após a última linha do grupo
+        const headerRow = document.querySelector('.finance-group-header[data-header-group="' + grp + '"]');
+        let insertTarget = headerRow;
+        if (headerRow) {
+          let next = headerRow.nextElementSibling;
+          while (next && next.getAttribute('data-group') === grp) {
+            insertTarget = next;
+            next = next.nextElementSibling;
+          }
+          if (insertTarget.nextElementSibling) {
+            insertTarget.parentNode.insertBefore(tr, insertTarget.nextElementSibling);
+          } else {
+            insertTarget.parentNode.appendChild(tr);
+          }
+        } else {
+          document.querySelector('#table-finance-matrix tbody')?.appendChild(tr);
+        }
+
+        attachCellListeners(tr);
+        recalculateDRE();
+
+        // Foco imediato no campo do Nome da Conta
+        const nameInput = tr.querySelector('.input-inline-name');
+        if (nameInput) {
+          nameInput.focus();
         }
       });
     });

@@ -10,7 +10,7 @@ let browser: any;
 const HERMES_PLAYWRIGHT = '/home/hermes/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs';
 const PLAYWRIGHT_PATH = process.env.PLAYWRIGHT_PATH || (fs.existsSync(HERMES_PLAYWRIGHT) ? HERMES_PLAYWRIGHT : 'playwright');
 
-describe('Gestão Completa de Recursos Financeiros UI (AV-100 / AC-1 a AC-6)', () => {
+describe('Gestão Completa de Recursos Financeiros UI — Grade Inline 12 Meses (AV-100 / AV-106)', () => {
   before(async () => {
     serverInstance = await startDashboardServer(0);
     const port = serverInstance.address().port;
@@ -29,7 +29,7 @@ describe('Gestão Completa de Recursos Financeiros UI (AV-100 / AC-1 a AC-6)', (
     }
   });
 
-  test('AC-1: Botão e modal para criar nova conta em RECURSOS_FINANCEIROS com Nome e Perfil (PF/PJ)', async () => {
+  test('AC-1: Botão para criar nova linha em RECURSOS_FINANCEIROS diretamente na grade sem modal com foco no Nome', async () => {
     const page = await browser.newPage();
     await page.goto(`${baseUrl}/`);
 
@@ -38,68 +38,75 @@ describe('Gestão Completa de Recursos Financeiros UI (AV-100 / AC-1 a AC-6)', (
     const btnNewResource = page.locator('#btn-new-resource');
     await assert.doesNotReject(async () => await btnNewResource.waitFor({ state: 'visible' }));
 
-    // Clica para abrir modal
+    // Clica para adicionar nova linha inline
     await btnNewResource.click();
-    const modal = page.locator('#modal-new-resource');
-    await assert.doesNotReject(async () => await modal.waitFor({ state: 'visible' }));
+    await page.waitForTimeout(300);
 
-    // Preenche dados da nova conta
-    await page.fill('#input-resource-name', 'Investimento CDB DI');
-    await page.selectOption('#select-resource-profile', 'PF');
-    await page.click('#btn-submit-new-resource');
+    // Sem modais pop-up
+    assert.equal(await page.locator('#modal-new-resource').count(), 0, 'Nenhum modal deve ser aberto');
 
-    // Aguarda reload e verifica presença da nova conta na tabela
-    await page.waitForTimeout(500);
-    const row = page.locator('tr[data-group="RECURSOS_FINANCEIROS"]').filter({ hasText: 'Investimento CDB DI' });
-    await assert.doesNotReject(async () => await row.waitFor({ state: 'visible' }));
-    const profileBadge = row.locator('.badge');
-    assert.equal(await profileBadge.innerText(), 'PF');
+    // Localiza a linha inserida em RECURSOS_FINANCEIROS
+    const rows = page.locator('tr[data-group="RECURSOS_FINANCEIROS"]');
+    const lastRow = rows.last();
+    await assert.doesNotReject(async () => await lastRow.waitFor({ state: 'visible' }));
+
+    // Preenche dados da nova conta diretamente na linha
+    const nameInput = lastRow.locator('.input-inline-name');
+    await nameInput.fill('Investimento CDB DI');
+    await nameInput.dispatchEvent('blur');
+
+    const profileSelect = lastRow.locator('.select-inline-profile');
+    await profileSelect.selectOption('PF');
+    await profileSelect.dispatchEvent('change');
+
+    await page.waitForTimeout(400);
+    assert.equal(await nameInput.inputValue(), 'Investimento CDB DI');
+    assert.equal(await profileSelect.inputValue(), 'PF');
 
     await page.close();
   });
 
-  test('AC-2, AC-3 & AC-4: Edição de conta, perfil e saldos mensais preservando Último Saldo Informado', async () => {
+  test('AC-2, AC-3 & AC-4: Edição inline de conta, perfil e saldos mensais preservando Último Saldo Informado', async () => {
     const page = await browser.newPage();
     await page.goto(`${baseUrl}/`);
     await page.click('#tab-btn-finance');
 
-    const row = page.locator('tr[data-group="RECURSOS_FINANCEIROS"]').filter({ hasText: 'Investimento CDB DI' });
+    const row = page.locator('tr[data-group="RECURSOS_FINANCEIROS"]').filter({ has: page.locator('input[value*="Investimento CDB DI"]') });
     await row.waitFor({ state: 'visible' });
 
-    // Clica no botão de editar da linha
-    const btnEdit = row.locator('.btn-edit-resource');
-    await btnEdit.click();
+    // Altera nome e perfil inline
+    const nameInput = row.locator('.input-inline-name');
+    await nameInput.fill('Investimento CDB DI PJ Turbo');
+    await nameInput.dispatchEvent('blur');
 
-    const modalEdit = page.locator('#modal-edit-resource');
-    await assert.doesNotReject(async () => await modalEdit.waitFor({ state: 'visible' }));
+    const profileSelect = row.locator('.select-inline-profile');
+    await profileSelect.selectOption('PJ');
+    await profileSelect.dispatchEvent('change');
 
-    // Altera nome e perfil
-    await page.fill('#edit-resource-name', 'Investimento CDB DI PJ Turbo');
-    await page.selectOption('#edit-resource-profile', 'PJ');
+    // Informa saldos de Jan (10.000) e Mar (18.500)
+    const inputJan = row.locator('.input-inline-month[data-month="1"]');
+    await inputJan.fill('10000');
+    await inputJan.dispatchEvent('blur');
 
-    // Informa saldos de Jan e Mar
-    await page.fill('#edit-resource-realized-1', '10000');
-    await page.fill('#edit-resource-realized-3', '18500');
+    const inputMar = row.locator('.input-inline-month[data-month="3"]');
+    await inputMar.fill('18500');
+    await inputMar.dispatchEvent('blur');
 
-    // Salva
-    await page.click('#btn-submit-edit-resource');
     await page.waitForTimeout(500);
 
     // Verifica linha atualizada
-    const updatedRow = page.locator('tr[data-group="RECURSOS_FINANCEIROS"]').filter({ hasText: 'Investimento CDB DI PJ Turbo' });
-    await assert.doesNotReject(async () => await updatedRow.waitFor({ state: 'visible' }));
-    assert.equal(await updatedRow.locator('.badge').innerText(), 'PJ');
+    assert.equal(await profileSelect.inputValue(), 'PJ');
 
     // Verifica total anual calculado pela regra do último saldo informado (18.500,00)
-    const rowText = await updatedRow.innerText();
-    assert.ok(rowText.includes('18.500,00') || rowText.includes('18500'), 'Total deve refletir o último saldo informado de 18.500');
+    const totalCell = row.locator('.cell-total-anual');
+    const totalText = await totalCell.innerText();
+    assert.ok(totalText.includes('18.500,00') || totalText.includes('18500'), 'Total deve refletir o último saldo informado de 18.500');
 
     await page.close();
   });
 
   test('AC-5: Exclusão de linha de recurso financeiro com confirmação', async () => {
     const page = await browser.newPage();
-    // Configura aceite automático do diálogo de confirmação
     page.on('dialog', async (dialog: any) => {
       await dialog.accept();
     });
@@ -107,14 +114,14 @@ describe('Gestão Completa de Recursos Financeiros UI (AV-100 / AC-1 a AC-6)', (
     await page.goto(`${baseUrl}/`);
     await page.click('#tab-btn-finance');
 
-    const row = page.locator('tr[data-group="RECURSOS_FINANCEIROS"]').filter({ hasText: 'Investimento CDB DI PJ Turbo' });
+    const row = page.locator('tr[data-group="RECURSOS_FINANCEIROS"]').filter({ has: page.locator('input[value*="Investimento CDB DI PJ Turbo"]') });
     await row.waitFor({ state: 'visible' });
 
     const btnDelete = row.locator('.btn-delete-resource');
     await btnDelete.click();
 
     await page.waitForTimeout(500);
-    const count = await page.locator('tr[data-group="RECURSOS_FINANCEIROS"]').filter({ hasText: 'Investimento CDB DI PJ Turbo' }).count();
+    const count = await page.locator('tr[data-group="RECURSOS_FINANCEIROS"]').filter({ has: page.locator('input[value*="Investimento CDB DI PJ Turbo"]') }).count();
     assert.equal(count, 0, 'A linha deve ter sido removida da tabela');
 
     await page.close();

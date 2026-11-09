@@ -10,7 +10,7 @@ let browser: any;
 const HERMES_PLAYWRIGHT = '/home/hermes/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs';
 const PLAYWRIGHT_PATH = process.env.PLAYWRIGHT_PATH || (fs.existsSync(HERMES_PLAYWRIGHT) ? HERMES_PLAYWRIGHT : 'playwright');
 
-describe('Gestão Completa dos Demais Grupos Financeiros UI (AV-101 / Fase 1 / AC-1 a AC-5)', () => {
+describe('Gestão Completa dos Demais Grupos Financeiros UI — Grade Inline 12 Meses (AV-101 / AV-106)', () => {
   before(async () => {
     serverInstance = await startDashboardServer(0);
     const port = serverInstance.address().port;
@@ -29,41 +29,57 @@ describe('Gestão Completa dos Demais Grupos Financeiros UI (AV-101 / Fase 1 / A
     }
   });
 
-  test('AC-1: Botões e modal para criar novas linhas em RECEITAS, INVESTIMENTOS, DESPESAS_FIXAS e DESPESAS_VARIAVEIS', async () => {
+  test('AC-1: Botões para criar novas linhas em RECEITAS, INVESTIMENTOS, DESPESAS_FIXAS e DESPESAS_VARIAVEIS diretamente na grade sem modais', async () => {
     const page = await browser.newPage();
     await page.goto(`${baseUrl}/`);
     await page.click('#tab-btn-finance');
 
-    // 1. Criação em RECEITAS
+    // 1. Criação em RECEITAS via botão "+ Nova Linha"
     const btnNewReceita = page.locator('#btn-new-receitas');
     await assert.doesNotReject(async () => await btnNewReceita.waitFor({ state: 'visible' }));
     await btnNewReceita.click();
 
-    const modal = page.locator('#modal-new-resource');
-    await assert.doesNotReject(async () => await modal.waitFor({ state: 'visible' }));
+    // Sem modais pop-up
+    assert.equal(await page.locator('#modal-new-resource').count(), 0, 'Nenhum modal deve ser aberto');
 
-    await page.fill('#input-resource-name', 'Consultoria e Assinaturas Cloud');
-    await page.selectOption('#select-resource-profile', 'PJ');
-    await page.click('#btn-submit-new-resource');
+    await page.waitForTimeout(300);
+    const receitaRows = page.locator('tr[data-group="RECEITAS"]');
+    const lastReceitaRow = receitaRows.last();
+    await assert.doesNotReject(async () => await lastReceitaRow.waitFor({ state: 'visible' }));
 
-    await page.waitForTimeout(400);
-    const receitaRow = page.locator('tr[data-group="RECEITAS"]').filter({ hasText: 'Consultoria e Assinaturas Cloud' });
-    await assert.doesNotReject(async () => await receitaRow.waitFor({ state: 'visible' }));
-    assert.equal(await receitaRow.locator('.badge').innerText(), 'PJ');
+    const nameInput = lastReceitaRow.locator('.input-inline-name');
+    await nameInput.fill('Consultoria e Assinaturas Cloud');
+    await nameInput.dispatchEvent('blur');
 
-    // 2. Criação em DESPESAS_FIXAS
-    const btnNewDespesaFixa = page.locator('#btn-new-despesas-fixas');
-    await assert.doesNotReject(async () => await btnNewDespesaFixa.waitFor({ state: 'visible' }));
-    await btnNewDespesaFixa.click();
-
-    await modal.waitFor({ state: 'visible' });
-    await page.fill('#input-resource-name', 'Internet Fibra Óptica');
-    await page.selectOption('#select-resource-profile', 'PF');
-    await page.click('#btn-submit-new-resource');
+    const profileSelect = lastReceitaRow.locator('.select-inline-profile');
+    await profileSelect.selectOption('PJ');
+    await profileSelect.dispatchEvent('change');
 
     await page.waitForTimeout(400);
-    const despesaRow = page.locator('tr[data-group="DESPESAS_FIXAS"]').filter({ hasText: 'Internet Fibra Óptica' });
-    await assert.doesNotReject(async () => await despesaRow.waitFor({ state: 'visible' }));
+
+    // 2. Criação em INVESTIMENTOS
+    const btnNewInv = page.locator('#btn-new-investimentos');
+    await btnNewInv.click();
+    await page.waitForTimeout(300);
+    const lastInvRow = page.locator('tr[data-group="INVESTIMENTOS"]').last();
+    await lastInvRow.locator('.input-inline-name').fill('Fundo Imobiliário HGLG11');
+    await lastInvRow.locator('.input-inline-name').dispatchEvent('blur');
+
+    // 3. Criação em DESPESAS_FIXAS
+    const btnNewFix = page.locator('#btn-new-despesas-fixas');
+    await btnNewFix.click();
+    await page.waitForTimeout(300);
+    const lastFixRow = page.locator('tr[data-group="DESPESAS_FIXAS"]').last();
+    await lastFixRow.locator('.input-inline-name').fill('Internet Fibra Óptica');
+    await lastFixRow.locator('.input-inline-name').dispatchEvent('blur');
+
+    // 4. Criação em DESPESAS_VARIAVEIS
+    const btnNewVar = page.locator('#btn-new-despesas-variaveis');
+    await btnNewVar.click();
+    await page.waitForTimeout(300);
+    const lastVarRow = page.locator('tr[data-group="DESPESAS_VARIAVEIS"]').last();
+    await lastVarRow.locator('.input-inline-name').fill('Uber e Transporte');
+    await lastVarRow.locator('.input-inline-name').dispatchEvent('blur');
 
     await page.close();
   });
@@ -73,29 +89,24 @@ describe('Gestão Completa dos Demais Grupos Financeiros UI (AV-101 / Fase 1 / A
     await page.goto(`${baseUrl}/`);
     await page.click('#tab-btn-finance');
 
-    // Localiza a linha de Receita recém-criada
-    const receitaRow = page.locator('tr[data-group="RECEITAS"]').filter({ hasText: 'Consultoria e Assinaturas Cloud' });
+    const receitaRow = page.locator('tr[data-group="RECEITAS"]').filter({ has: page.locator('input[value*="Consultoria e Assinaturas Cloud"]') });
     await receitaRow.waitFor({ state: 'visible' });
 
-    // Clica em Editar
-    const btnEdit = receitaRow.locator('.btn-edit-line');
-    await btnEdit.click();
+    // Preenche valores inline em Janeiro (10.000) e Março (15.000)
+    const inputJan = receitaRow.locator('.input-inline-month[data-month="1"]');
+    await inputJan.fill('10000');
+    await inputJan.dispatchEvent('blur');
 
-    const modalEdit = page.locator('#modal-edit-resource');
-    await assert.doesNotReject(async () => await modalEdit.waitFor({ state: 'visible' }));
+    const inputMar = receitaRow.locator('.input-inline-month[data-month="3"]');
+    await inputMar.fill('15000');
+    await inputMar.dispatchEvent('blur');
 
-    // Preenche valores em Janeiro (10.000) e Março (15.000)
-    await page.fill('#edit-resource-realized-1', '10000');
-    await page.fill('#edit-resource-realized-3', '15000');
-
-    // Salva
-    await page.click('#btn-submit-edit-resource');
     await page.waitForTimeout(500);
 
     // Valida que o Total Anual é a soma acumulada dos 12 meses (10.000 + 15.000 = 25.000,00)
-    const updatedRow = page.locator('tr[data-group="RECEITAS"]').filter({ hasText: 'Consultoria e Assinaturas Cloud' });
-    await updatedRow.waitFor({ state: 'visible' });
-    const rowText = await updatedRow.innerText();
+    const totalCell = receitaRow.locator('.cell-total-anual');
+    await totalCell.waitFor({ state: 'visible' });
+    const rowText = await totalCell.innerText();
     assert.ok(
       rowText.includes('25.000,00') || rowText.includes('25000'),
       'Para grupos de fluxo (RECEITAS), a consolidação anual deve ser a soma acumulada (25.000,00)'
@@ -113,15 +124,15 @@ describe('Gestão Completa dos Demais Grupos Financeiros UI (AV-101 / Fase 1 / A
     await page.goto(`${baseUrl}/`);
     await page.click('#tab-btn-finance');
 
-    const despesaRow = page.locator('tr[data-group="DESPESAS_FIXAS"]').filter({ hasText: 'Internet Fibra Óptica' });
+    const despesaRow = page.locator('tr[data-group="DESPESAS_FIXAS"]').filter({ has: page.locator('input[value*="Internet Fibra Óptica"]') });
     await despesaRow.waitFor({ state: 'visible' });
 
     const btnDelete = despesaRow.locator('.btn-delete-line');
     await btnDelete.click();
 
     // Espera remoção imediata do DOM sem reload
-    await page.waitForTimeout(300);
-    const count = await page.locator('tr[data-group="DESPESAS_FIXAS"]').filter({ hasText: 'Internet Fibra Óptica' }).count();
+    await page.waitForTimeout(400);
+    const count = await page.locator('tr[data-group="DESPESAS_FIXAS"]').filter({ has: page.locator('input[value*="Internet Fibra Óptica"]') }).count();
     assert.equal(count, 0, 'A linha de despesa fixa deve ser removida imediatamente da tabela');
 
     await page.close();

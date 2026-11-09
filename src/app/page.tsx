@@ -27,19 +27,16 @@ export interface FinancialLineAccount {
 export type ResourceAccount = FinancialLineAccount;
 
 /**
- * Página principal do SaaS Multi-Tenant no Next.js App Router (ADR-0002 / AV-98 / AV-100 / AV-101)
+ * Página principal do SaaS Multi-Tenant no Next.js App Router (ADR-0002 / AV-98 / AV-100 / AV-101 / AV-106)
  * Renderiza interface dos 4 módulos com componentes Liquid Lens / Liquid Glass UI
- * e gestão completa de todos os 5 grupos financeiros (CRUD, Jan..Dez inline e DRE em tempo real).
+ * e Grade Inline contínua de 12 meses (Jan..Dez) sem modais para todos os 5 grupos financeiros.
  */
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<string>('tab-finance');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isResourceModalOpen, setIsResourceModalOpen] = useState<boolean>(false);
-  const [isEditResourceModalOpen, setIsEditResourceModalOpen] = useState<boolean>(false);
-  const [targetGroupForNew, setTargetGroupForNew] = useState<FinancialGroup>('RECURSOS_FINANCEIROS');
+  const [profileFilter, setProfileFilter] = useState<'ALL' | 'PF' | 'PJ'>('ALL');
   const [tenantName, setTenantName] = useState<string>('Avance Matriz');
   const [tenantPlan, setTenantPlan] = useState<string>('PRO');
-  const [editingResource, setEditingResource] = useState<FinancialLineAccount | null>(null);
 
   const [financialLines, setFinancialLines] = useState<FinancialLineAccount[]>([
     // 1. RECURSOS FINANCEIROS
@@ -137,76 +134,61 @@ export default function DashboardPage() {
     }
   };
 
-  const handleOpenAddModal = (group: FinancialGroup) => {
-    setTargetGroupForNew(group);
-    setIsResourceModalOpen(true);
+  // Inserção inline direta de nova linha (AC-3)
+  const handleAddInlineLine = (group: FinancialGroup) => {
+    const newId = `line-${Date.now()}`;
+    const newLine: FinancialLineAccount = {
+      id: newId,
+      name: '',
+      profile: 'PF',
+      group,
+      months: {},
+    };
+    setFinancialLines((prev) => [...prev, newLine]);
+    setTimeout(() => {
+      const el = document.getElementById(`input-name-${newId}`);
+      el?.focus();
+    }, 50);
   };
 
-  const handleAddResource = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const profile = (formData.get('profile') as 'PF' | 'PJ') || 'PF';
-    const group = (formData.get('group') as FinancialGroup) || targetGroupForNew;
-    const subGroup = (formData.get('subGroup') as string) || undefined;
-
-    if (name) {
-      const newLine: FinancialLineAccount = {
-        id: `line-${Date.now()}`,
-        name,
-        profile,
-        group,
-        subGroup,
-        months: {},
-      };
-      setFinancialLines((prev) => [...prev, newLine]);
-      setIsResourceModalOpen(false);
-    }
-  };
-
-  const handleOpenEditResource = (res: FinancialLineAccount) => {
-    setEditingResource(res);
-    setIsEditResourceModalOpen(true);
-  };
-
-  const handleSaveEditResource = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingResource) return;
-
-    const formData = new FormData(e.currentTarget);
-    const name = (formData.get('name') as string) || editingResource.name;
-    const profile = (formData.get('profile') as 'PF' | 'PJ') || editingResource.profile;
-    const group = (formData.get('group') as FinancialGroup) || editingResource.group;
-    const subGroup = (formData.get('subGroup') as string) || editingResource.subGroup;
-
-    const updatedMonths: Record<number, { realized: number; target: number }> = {};
-    for (let m = 1; m <= 12; m++) {
-      const realizedVal = formData.get(`realized-${m}`);
-      const targetVal = formData.get(`target-${m}`);
-      updatedMonths[m] = {
-        realized: realizedVal ? Number(realizedVal) : 0,
-        target: targetVal ? Number(targetVal) : 0,
-      };
-    }
-
+  // Edição inline célula a célula (AC-2)
+  const handleCellChange = (lineId: string, month: number, value: string) => {
+    const num = value !== '' ? parseFloat(value) : 0;
     setFinancialLines((prev) =>
-      prev.map((r) =>
-        r.id === editingResource.id
-          ? { ...r, name, profile, group, subGroup, months: updatedMonths }
-          : r
+      prev.map((l) =>
+        l.id === lineId
+          ? {
+              ...l,
+              months: {
+                ...l.months,
+                [month]: { realized: num, target: l.months[month]?.target || 0 },
+              },
+            }
+          : l
       )
     );
-    setIsEditResourceModalOpen(false);
-    setEditingResource(null);
   };
 
+  const handleNameChange = (lineId: string, name: string) => {
+    setFinancialLines((prev) =>
+      prev.map((l) => (l.id === lineId ? { ...l, name } : l))
+    );
+  };
+
+  const handleProfileChange = (lineId: string, profile: 'PF' | 'PJ') => {
+    setFinancialLines((prev) =>
+      prev.map((l) => (l.id === lineId ? { ...l, profile } : l))
+    );
+  };
+
+  // Exclusão inline instantânea (AC-4)
   const handleDeleteResource = (id: string, name: string) => {
-    if (confirm(`Deseja realmente excluir "${name}"?`)) {
+    if (confirm(`Deseja realmente excluir "${name || 'esta linha'}"?`)) {
       setFinancialLines((prev) => prev.filter((r) => r.id !== id));
     }
   };
 
-  // Regra do Último Saldo Informado para Recursos Financeiros
+  // Regra do Último Saldo Informado para Recursos Financeiros (AC-5)
   const getLastBalance = (res: FinancialLineAccount): number => {
     for (let m = 12; m >= 1; m--) {
       const val = res.months[m]?.realized ?? 0;
@@ -215,7 +197,7 @@ export default function DashboardPage() {
     return 0;
   };
 
-  // Regra da Soma Acumulada Anual dos 12 Meses para grupos de Fluxo
+  // Regra da Soma Acumulada Anual dos 12 Meses para grupos de Fluxo (AC-5)
   const getAnnualSum = (line: FinancialLineAccount): number => {
     let sum = 0;
     for (let m = 1; m <= 12; m++) {
@@ -224,21 +206,26 @@ export default function DashboardPage() {
     return sum;
   };
 
+  // Filtro de Visão PF / PJ (AC-6)
+  const visibleLines = financialLines.filter(
+    (l) => profileFilter === 'ALL' || l.profile === profileFilter
+  );
+
   // Cálculos dinâmicos em tempo real para o mês 1 (DRE & KPIs)
   const refMonth = 1;
-  const monthRevenue = financialLines
+  const monthRevenue = visibleLines
     .filter((l) => l.group === 'RECEITAS')
     .reduce((sum, l) => sum + (l.months[refMonth]?.realized ?? 0), 0);
 
-  const monthInvestments = financialLines
+  const monthInvestments = visibleLines
     .filter((l) => l.group === 'INVESTIMENTOS')
     .reduce((sum, l) => sum + (l.months[refMonth]?.realized ?? 0), 0);
 
-  const monthFixedExpenses = financialLines
+  const monthFixedExpenses = visibleLines
     .filter((l) => l.group === 'DESPESAS_FIXAS')
     .reduce((sum, l) => sum + (l.months[refMonth]?.realized ?? 0), 0);
 
-  const monthVariableExpenses = financialLines
+  const monthVariableExpenses = visibleLines
     .filter((l) => l.group === 'DESPESAS_VARIAVEIS')
     .reduce((sum, l) => sum + (l.months[refMonth]?.realized ?? 0), 0);
 
@@ -247,22 +234,22 @@ export default function DashboardPage() {
 
   let accumulatedResultYear = 0;
   for (let m = 1; m <= 12; m++) {
-    const rev = financialLines
+    const rev = visibleLines
       .filter((l) => l.group === 'RECEITAS')
       .reduce((s, l) => s + (l.months[m]?.realized ?? 0), 0);
-    const inv = financialLines
+    const inv = visibleLines
       .filter((l) => l.group === 'INVESTIMENTOS')
       .reduce((s, l) => s + (l.months[m]?.realized ?? 0), 0);
-    const fix = financialLines
+    const fix = visibleLines
       .filter((l) => l.group === 'DESPESAS_FIXAS')
       .reduce((s, l) => s + (l.months[m]?.realized ?? 0), 0);
-    const v = financialLines
+    const v = visibleLines
       .filter((l) => l.group === 'DESPESAS_VARIAVEIS')
       .reduce((s, l) => s + (l.months[m]?.realized ?? 0), 0);
     accumulatedResultYear += rev - inv - fix - v;
   }
 
-  const totalPatrimony = financialLines
+  const totalPatrimony = visibleLines
     .filter((l) => l.group === 'RECURSOS_FINANCEIROS')
     .reduce((acc, r) => acc + getLastBalance(r), 0);
 
@@ -277,35 +264,35 @@ export default function DashboardPage() {
       group: 'RECURSOS_FINANCEIROS',
       title: '1. Recursos Financeiros & Saldos (Último Saldo Informado)',
       btnId: 'btn-new-resource',
-      btnLabel: '+ Nova Conta / Recurso',
+      btnLabel: '+ Nova Linha',
       isBalanceGroup: true,
     },
     {
       group: 'RECEITAS',
       title: '2. Receitas (Soma Acumulada Anual)',
       btnId: 'btn-new-receitas',
-      btnLabel: '+ Nova Receita',
+      btnLabel: '+ Nova Linha',
       isBalanceGroup: false,
     },
     {
       group: 'INVESTIMENTOS',
       title: '3. Investimentos (Soma Acumulada Anual)',
       btnId: 'btn-new-investimentos',
-      btnLabel: '+ Novo Investimento',
+      btnLabel: '+ Nova Linha',
       isBalanceGroup: false,
     },
     {
       group: 'DESPESAS_FIXAS',
       title: '4. Despesas Fixas (Soma Acumulada Anual)',
       btnId: 'btn-new-despesas-fixas',
-      btnLabel: '+ Nova Despesa Fixa',
+      btnLabel: '+ Nova Linha',
       isBalanceGroup: false,
     },
     {
       group: 'DESPESAS_VARIAVEIS',
       title: '5. Despesas Variáveis (Soma Acumulada Anual)',
       btnId: 'btn-new-despesas-variaveis',
-      btnLabel: '+ Nova Despesa Variável',
+      btnLabel: '+ Nova Linha',
       isBalanceGroup: false,
     },
   ];
@@ -340,7 +327,11 @@ export default function DashboardPage() {
           </div>
           <div className="control-group">
             <label htmlFor="profile-filter">Visão:</label>
-            <select id="profile-filter">
+            <select
+              id="profile-filter"
+              value={profileFilter}
+              onChange={(e) => setProfileFilter(e.target.value as 'ALL' | 'PF' | 'PJ')}
+            >
               <option value="ALL">Todos (PF + PJ)</option>
               <option value="PF">Pessoa Física (PF)</option>
               <option value="PJ">Pessoa Jurídica (PJ)</option>
@@ -394,9 +385,9 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Gestão dos 5 Grupos Financeiros (AV-100 / AV-101) */}
+          {/* Grade Inline de 12 Meses Jan..Dez sem Modais (AV-106 / AC-1 a AC-6) */}
           {groupsConfig.map((grp) => {
-            const lines = financialLines.filter((l) => l.group === grp.group);
+            const lines = visibleLines.filter((l) => l.group === grp.group);
             return (
               <div
                 key={grp.group}
@@ -416,8 +407,8 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     id={grp.btnId}
-                    className="btn-primary"
-                    onClick={() => handleOpenAddModal(grp.group)}
+                    className="btn-primary btn-add-inline-line"
+                    onClick={() => handleAddInlineLine(grp.group)}
                   >
                     {grp.btnLabel}
                   </button>
@@ -427,39 +418,91 @@ export default function DashboardPage() {
                   <table className="data-table" aria-label={grp.title}>
                     <thead>
                       <tr>
-                        <th scope="col">Conta / Linha</th>
-                        <th scope="col">Perfil</th>
-                        <th scope="col">Subgrupo / Categoria</th>
-                        <th scope="col">
-                          {grp.isBalanceGroup ? 'Último Saldo Informado' : 'Total Anual (Soma)'}
-                        </th>
-                        <th scope="col">Ações</th>
+                        <th scope="col" style={{ minWidth: '170px' }}>Conta / Linha</th>
+                        <th scope="col" style={{ width: '70px' }}>Perfil</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Jan</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Fev</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Mar</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Abr</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Mai</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Jun</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Jul</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Ago</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Set</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Out</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Nov</th>
+                        <th scope="col" style={{ minWidth: '75px' }}>Dez</th>
+                        <th scope="col" style={{ minWidth: '100px', textAlign: 'right' }}>Total Anual</th>
+                        <th scope="col" style={{ width: '80px', textAlign: 'center' }}>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {lines.length === 0 ? (
                         <tr>
-                          <td colSpan={5} style={{ textAlign: 'center', opacity: 0.6 }}>
-                            Nenhum item cadastrado neste grupo.
+                          <td colSpan={16} style={{ textAlign: 'center', opacity: 0.6 }}>
+                            Nenhum item cadastrado neste grupo. Clique em &quot;+ Nova Linha&quot; para adicionar.
                           </td>
                         </tr>
                       ) : (
                         lines.map((r) => {
                           const totalVal = grp.isBalanceGroup ? getLastBalance(r) : getAnnualSum(r);
                           return (
-                            <tr key={r.id} data-group={r.group}>
+                            <tr key={r.id} data-group={r.group} data-line-id={r.id} data-profile={r.profile}>
                               <td>
-                                <strong>{r.name}</strong>
+                                <input
+                                  id={`input-name-${r.id}`}
+                                  type="text"
+                                  className="cell-inline-input input-inline-name"
+                                  value={r.name}
+                                  placeholder="Nome da conta..."
+                                  onChange={(e) => handleNameChange(r.id, e.target.value)}
+                                  aria-label={`Nome da Conta ${r.name}`}
+                                  style={{
+                                    border: '1px solid transparent',
+                                    background: 'transparent',
+                                    fontWeight: 600,
+                                    width: '100%',
+                                    padding: '4px 6px',
+                                    borderRadius: '4px',
+                                  }}
+                                />
                               </td>
                               <td>
-                                <span
-                                  className={`badge ${r.profile === 'PF' ? 'badge-plan' : 'status-pending'}`}
+                                <select
+                                  className="select-inline-profile"
+                                  value={r.profile}
+                                  onChange={(e) => handleProfileChange(r.id, e.target.value as 'PF' | 'PJ')}
+                                  aria-label={`Perfil ${r.name}`}
                                 >
-                                  {r.profile}
-                                </span>
+                                  <option value="PF">PF</option>
+                                  <option value="PJ">PJ</option>
+                                </select>
                               </td>
-                              <td>{r.subGroup || '—'}</td>
-                              <td>
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => {
+                                const val = r.months[m]?.realized;
+                                return (
+                                  <td key={m} data-month={m}>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      className="cell-inline-input input-inline-month"
+                                      value={val !== undefined && val !== 0 ? val : ''}
+                                      placeholder="0,00"
+                                      onChange={(e) => handleCellChange(r.id, m, e.target.value)}
+                                      aria-label={`Mês ${m} ${r.name}`}
+                                      style={{
+                                        border: '1px solid transparent',
+                                        background: 'transparent',
+                                        textAlign: 'right',
+                                        width: '100%',
+                                        padding: '4px 6px',
+                                        borderRadius: '4px',
+                                      }}
+                                    />
+                                  </td>
+                                );
+                              })}
+                              <td style={{ textAlign: 'right' }}>
                                 <strong>
                                   R${' '}
                                   {totalVal.toLocaleString('pt-BR', {
@@ -467,23 +510,14 @@ export default function DashboardPage() {
                                   })}
                                 </strong>
                               </td>
-                              <td>
-                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                  <button
-                                    type="button"
-                                    className="btn-secondary btn-edit-line"
-                                    onClick={() => handleOpenEditResource(r)}
-                                  >
-                                    Editar
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-danger btn-delete-line"
-                                    onClick={() => handleDeleteResource(r.id, r.name)}
-                                  >
-                                    Excluir
-                                  </button>
-                                </div>
+                              <td style={{ textAlign: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="btn-danger btn-delete-line btn-delete-resource"
+                                  onClick={() => handleDeleteResource(r.id, r.name)}
+                                >
+                                  Excluir
+                                </button>
                               </td>
                             </tr>
                           );
@@ -547,7 +581,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Modal Novo Tenant */}
+      {/* Modal Novo Tenant (Permanece para onboarding multi-tenant) */}
       <LiquidLensModal
         id="modal-new-tenant"
         isOpen={isModalOpen}
@@ -562,7 +596,7 @@ export default function DashboardPage() {
               id="input-tenant-name"
               name="name"
               required
-              placeholder="Ex: Minha Empresa Ltda"
+              placeholder="Ex: Avance Filial SP"
             />
           </div>
           <div className="form-group">
@@ -587,180 +621,6 @@ export default function DashboardPage() {
           </div>
         </form>
       </LiquidLensModal>
-
-      {/* Modal Nova Conta / Linha Financeira */}
-      <LiquidLensModal
-        id="modal-new-resource"
-        isOpen={isResourceModalOpen}
-        onClose={() => setIsResourceModalOpen(false)}
-        title={`Nova Conta / Linha (${targetGroupForNew})`}
-      >
-        <form onSubmit={handleAddResource}>
-          <input type="hidden" name="group" value={targetGroupForNew} />
-          <div className="form-group">
-            <label htmlFor="input-new-resource-name">Nome da Conta / Linha:</label>
-            <input
-              type="text"
-              id="input-new-resource-name"
-              name="name"
-              required
-              placeholder="Ex: Salário, Aluguel, CDB DI, etc."
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="select-new-resource-profile">Perfil:</label>
-            <select id="select-new-resource-profile" name="profile">
-              <option value="PF">Pessoa Física (PF)</option>
-              <option value="PJ">Pessoa Jurídica (PJ)</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label htmlFor="input-new-resource-subgroup">Subgrupo / Categoria (Opcional):</label>
-            <input
-              type="text"
-              id="input-new-resource-subgroup"
-              name="subGroup"
-              placeholder="Ex: Moradia, Trabalho, Serviços..."
-            />
-          </div>
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setIsResourceModalOpen(false)}
-            >
-              Cancelar
-            </button>
-            <button type="submit" className="btn-primary">
-              Criar Linha
-            </button>
-          </div>
-        </form>
-      </LiquidLensModal>
-
-      {/* Modal Editar Linha Financeira & Meses Jan..Dez */}
-      {editingResource && (
-        <LiquidLensModal
-          id="modal-edit-resource"
-          isOpen={isEditResourceModalOpen}
-          onClose={() => {
-            setIsEditResourceModalOpen(false);
-            setEditingResource(null);
-          }}
-          title={`Editar Linha — ${editingResource.name} (${editingResource.group})`}
-        >
-          <form onSubmit={handleSaveEditResource}>
-            <input type="hidden" name="group" value={editingResource.group} />
-            <div className="form-group">
-              <label htmlFor="edit-modal-name">Nome:</label>
-              <input
-                type="text"
-                id="edit-modal-name"
-                name="name"
-                defaultValue={editingResource.name}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-modal-profile">Perfil:</label>
-              <select
-                id="edit-modal-profile"
-                name="profile"
-                defaultValue={editingResource.profile}
-              >
-                <option value="PF">Pessoa Física (PF)</option>
-                <option value="PJ">Pessoa Jurídica (PJ)</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-modal-subgroup">Subgrupo / Categoria:</label>
-              <input
-                type="text"
-                id="edit-modal-subgroup"
-                name="subGroup"
-                defaultValue={editingResource.subGroup || ''}
-                placeholder="Ex: Moradia, Operacional..."
-              />
-            </div>
-
-            <div className="form-group" style={{ marginTop: '0.75rem' }}>
-              <label>
-                <strong>
-                  {editingResource.group === 'RECURSOS_FINANCEIROS'
-                    ? 'Saldos Mensais (Jan..Dez) — Regra do Último Saldo Informado:'
-                    : 'Valores Mensais (Jan..Dez) — Consolidação por Soma Acumulada Anual (DRE):'}
-                </strong>
-              </label>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '0.4rem',
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                }}
-              >
-                {[
-                  'Jan',
-                  'Fev',
-                  'Mar',
-                  'Abr',
-                  'Mai',
-                  'Jun',
-                  'Jul',
-                  'Ago',
-                  'Set',
-                  'Out',
-                  'Nov',
-                  'Dez',
-                ].map((mName, idx) => {
-                  const m = idx + 1;
-                  const cur = editingResource.months[m] || { realized: 0, target: 0 };
-                  return (
-                    <div
-                      key={m}
-                      style={{
-                        padding: '0.35rem',
-                        background: 'rgba(255,255,255,0.2)',
-                        borderRadius: '6px',
-                      }}
-                    >
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                        {m} - {mName}
-                      </span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        name={`realized-${m}`}
-                        defaultValue={cur.realized || ''}
-                        placeholder="Realizado R$"
-                        style={{ width: '100%', fontSize: '0.75rem', marginTop: '0.2rem' }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="form-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setIsEditResourceModalOpen(false);
-                  setEditingResource(null);
-                }}
-              >
-                Cancelar
-              </button>
-              <button type="submit" className="btn-primary">
-                Salvar Alterações
-              </button>
-            </div>
-          </form>
-        </LiquidLensModal>
-      )}
     </main>
   );
 }
