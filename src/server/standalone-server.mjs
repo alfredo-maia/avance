@@ -278,45 +278,55 @@ function renderDashboardHtml(initialData) {
     }
     :root {
       --bg: #f8fafc;
-      --surface: rgba(255, 255, 255, 0.78);
-      --surface-subtle: rgba(241, 245, 249, 0.7);
+      --surface: #ffffff;
+      --surface-subtle: #f1f5f9;
       --text: #0f172a;
       --text-muted: #475569;
       --text-light: #64748b;
-      --border: rgba(203, 213, 225, 0.7);
+      --border: #e2e8f0;
       --primary: #2563eb;
       --primary-hover: #1d4ed8;
+      --primary-light: #3b82f6;
+      --secondary: #7c3aed;
       --success-bg: #dcfce7;
-      --success-text: #166534;
+      --success-text: #16a34a;
       --warning-bg: #fef3c7;
-      --warning-text: #92400e;
+      --warning-text: #d97706;
       --danger-bg: #fee2e2;
-      --danger-text: #991b1b;
+      --danger-text: #dc2626;
       --focus-ring: #2563eb;
-      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-      /* Liquid Lens Refraction Tokens */
-      --lens-blur: 16px;
-      --lens-saturate: 180%;
-      --lens-contrast: 102%;
-      --lens-rim: 1px solid rgba(255, 255, 255, 0.65);
-      --lens-specular: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.85);
-      --lens-shadow: 0 12px 32px -10px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
-      --dock-blur: 20px;
-      --dock-bg: rgba(255, 255, 255, 0.84);
-      --dock-border: 1px solid rgba(255, 255, 255, 0.7);
-      --dock-active-bg: rgba(37, 99, 235, 0.12);
-      --dock-active-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.22), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
-      --modal-backdrop-blur: 14px;
+      /* Material UI (MUI) Design Tokens */
+      --mui-radius: 8px;
+      --mui-card-radius: 12px;
+      --mui-card-border: 1px solid #e2e8f0;
+      --mui-card-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+      --mui-card-shadow-hover: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 4px 10px -2px rgba(15, 23, 42, 0.05);
+      --mui-dialog-radius: 12px;
+      --mui-dialog-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
       --modal-backdrop-bg: rgba(15, 23, 42, 0.5);
-      --modal-dialog-bg: rgba(255, 255, 255, 0.95);
-      --modal-dialog-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35), inset 0 1px 2px 0 rgba(255, 255, 255, 0.85);
+      --modal-backdrop-blur: 4px;
+
+      /* Tokens legados mapeados para Material UI para total compatibilidade retroativa */
+      --lens-blur: 0px;
+      --lens-saturate: 100%;
+      --lens-contrast: 100%;
+      --lens-rim: var(--mui-card-border);
+      --lens-specular: none;
+      --lens-shadow: var(--mui-card-shadow);
+      --dock-blur: 0px;
+      --dock-bg: #ffffff;
+      --dock-border: 1px solid #e2e8f0;
+      --dock-active-bg: rgba(37, 99, 235, 0.08);
+      --dock-active-shadow: none;
+      --modal-dialog-bg: #ffffff;
+      --modal-dialog-shadow: var(--mui-dialog-shadow);
     }
     body {
       font-family: var(--font);
-      background: radial-gradient(circle at 10% 20%, rgba(219, 234, 254, 0.55) 0%, rgba(248, 250, 252, 1) 45%),
-                  radial-gradient(circle at 90% 80%, rgba(224, 231, 255, 0.45) 0%, rgba(248, 250, 252, 0.85) 50%);
-      background-attachment: fixed;
+      background-color: var(--bg);
+      background: #f8fafc;
       color: var(--text);
       line-height: 1.5;
       min-height: 100vh;
@@ -331,11 +341,9 @@ function renderDashboardHtml(initialData) {
       box-sizing: border-box;
     }
     header.saas-header {
-      background: var(--surface);
-      backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
-      -webkit-backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
-      border: var(--lens-rim);
-      border-radius: 12px;
+      background: #ffffff;
+      border: var(--mui-card-border);
+      border-radius: var(--mui-card-radius);
       padding: 1rem 1.25rem;
       margin-bottom: 1.25rem;
       display: flex;
@@ -343,7 +351,7 @@ function renderDashboardHtml(initialData) {
       justify-content: space-between;
       align-items: center;
       gap: 1rem;
-      box-shadow: var(--lens-shadow), var(--lens-specular);
+      box-shadow: var(--mui-card-shadow);
     }
     .header-brand {
       display: flex;
@@ -469,20 +477,17 @@ function renderDashboardHtml(initialData) {
       padding: 0.25rem 0.35rem;
     }
 
-    /* Liquid Lens Dock & Tab Navigation */
+    /* Material UI (MUI) Tabs & Navigation */
     nav.tab-nav,
     .liquid-lens-dock {
       display: inline-flex;
-      gap: 0.4rem;
+      gap: 0.5rem;
       margin-bottom: 1.25rem;
       padding: 0.35rem 0.5rem;
-      background: var(--dock-bg);
-      backdrop-filter: blur(var(--dock-blur)) saturate(180%);
-      -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%);
-      border: var(--dock-border);
-      border-radius: 9999px;
-      box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.12),
-                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.85);
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--mui-radius);
+      box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05);
       overflow-x: auto;
       max-width: 100%;
       -webkit-overflow-scrolling: touch;
@@ -491,9 +496,11 @@ function renderDashboardHtml(initialData) {
     .liquid-lens-dock-tab {
       padding: 0.55rem 1.15rem;
       background: transparent;
-      border: 1px solid transparent;
-      border-radius: 9999px;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 4px;
       font-weight: 600;
+      font-size: 0.925rem;
       color: var(--text-muted);
       cursor: pointer;
       white-space: nowrap;
@@ -502,15 +509,14 @@ function renderDashboardHtml(initialData) {
     }
     .tab-btn:hover,
     .liquid-lens-dock-tab:hover {
-      background: rgba(255, 255, 255, 0.65);
+      background: rgba(37, 99, 235, 0.04);
       color: var(--text);
     }
     .tab-btn[aria-selected="true"],
     .liquid-lens-dock-tab-active {
-      background: var(--dock-active-bg);
+      background: rgba(37, 99, 235, 0.08);
       color: var(--primary);
-      border-color: rgba(37, 99, 235, 0.35);
-      box-shadow: var(--dock-active-shadow);
+      border-bottom: 2px solid var(--primary);
     }
     /* Tab Panels */
     .tab-panel {
@@ -519,7 +525,7 @@ function renderDashboardHtml(initialData) {
     .tab-panel[aria-hidden="false"] {
       display: block;
     }
-    /* Liquid Lens KPI Cards */
+    /* Material UI (MUI) KPI Cards */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -529,37 +535,22 @@ function renderDashboardHtml(initialData) {
     .kpi-card,
     .liquid-lens-card {
       position: relative;
-      background: var(--surface);
-      backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
-      -webkit-backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
-      border: var(--lens-rim);
-      border-radius: 12px;
+      background: #ffffff;
+      border: var(--mui-card-border);
+      border-radius: var(--mui-card-radius);
       padding: 1.1rem;
-      box-shadow: var(--lens-shadow), var(--lens-specular);
+      box-shadow: var(--mui-card-shadow);
       overflow: hidden;
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                  box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                  border-color 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .kpi-card:hover,
     .liquid-lens-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.16),
-                  0 6px 16px -2px rgba(15, 23, 42, 0.08),
-                  inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
-      border-color: rgba(255, 255, 255, 0.85);
+      box-shadow: var(--mui-card-shadow-hover);
     }
     .kpi-card::before,
     .liquid-lens-card::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 38%;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
-      pointer-events: none;
-      border-radius: inherit;
+      display: none;
     }
     .kpi-label {
       font-size: 0.8rem;
@@ -578,14 +569,12 @@ function renderDashboardHtml(initialData) {
     .kpi-value.warning { color: var(--warning-text); }
     /* Sections */
     .section-card {
-      background: var(--surface);
-      backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
-      -webkit-backdrop-filter: blur(var(--lens-blur)) saturate(var(--lens-saturate));
-      border: var(--lens-rim);
-      border-radius: 12px;
+      background: #ffffff;
+      border: var(--mui-card-border);
+      border-radius: var(--mui-card-radius);
       padding: 1.25rem;
       margin-bottom: 1.5rem;
-      box-shadow: var(--lens-shadow), var(--lens-specular);
+      box-shadow: var(--mui-card-shadow);
       width: 100%;
       box-sizing: border-box;
       position: relative;
@@ -732,7 +721,7 @@ function renderDashboardHtml(initialData) {
       height: auto;
       max-height: 320px;
     }
-    /* Modals & Liquid Lens Backdrop */
+    /* Material UI (MUI) Dialog & Backdrop */
     .modal,
     .liquid-lens-modal-backdrop {
       display: none;
@@ -754,27 +743,18 @@ function renderDashboardHtml(initialData) {
     .modal-content,
     .liquid-lens-modal {
       position: relative;
-      background: var(--modal-dialog-bg);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.75);
-      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--mui-dialog-radius);
       padding: 1.75rem;
       width: 100%;
       max-width: 480px;
-      box-shadow: var(--modal-dialog-shadow);
+      box-shadow: var(--mui-dialog-shadow);
       overflow: hidden;
     }
     .modal-content::before,
     .liquid-lens-modal::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 50px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 100%);
-      pointer-events: none;
+      display: none;
     }
     .modal-title {
       font-size: 1.15rem;
@@ -802,14 +782,14 @@ function renderDashboardHtml(initialData) {
     }
   </style>
 </head>
-<body class="liquid-lens-theme">
+<body class="mui-theme liquid-lens-theme">
   <div class="app-wrapper">
     <!-- Header / Administração SaaS Multi-Tenant -->
     <header class="saas-header" role="banner">
       <div class="header-brand">
         <h1 class="brand-title">Avance SaaS</h1>
         <span id="plan-badge" class="badge badge-plan">${tenant.plan}</span>
-        <span id="ds-badge" class="badge" style="background: rgba(37, 99, 235, 0.12); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.35); font-size: 0.75rem; font-weight: 600;">Liquid Lens DS</span>
+        <span id="ds-badge" class="badge" style="background: rgba(37, 99, 235, 0.12); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.35); font-size: 0.75rem; font-weight: 600;">Material UI (MUI)</span>
         <button id="btn-new-tenant" class="btn-primary" aria-haspopup="dialog" aria-controls="modal-new-tenant">+ Novo Tenant</button>
       </div>
 
